@@ -1,0 +1,43 @@
+% Use microtype for better spacing
+\usepackage{microtype}
+
+% Make section headers left-aligned (APA style)
+\usepackage{sectsty}
+\sectionfont{\normalfont\bfseries\raggedright}
+\subsectionfont{\normalfont\itshape\raggedright}
+
+% Set line spacing to 1.5
+\usepackage{setspace}
+\onehalfspacing
+
+% Allow fancy headers/footers
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\thepage}
+
+% Custom title formatting
+\usepackage{titlesec}
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+
+% Indent paragraphs (APA-style)
+\setlength{\parindent}{1.27cm}
+\setlength{\parskip}{0pt}
+
+% Allow wrapping of long html code lines
+\usepackage{listings}
+\lstset{
+  breaklines=true,
+  breakatwhitespace=false,
+  basicstyle=\ttfamily\small,
+  showstringspaces=false,
+  columns=flexible
+}
+
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{
+  breaklines=true,
+  breakanywhere=true,
+  commandchars=\\\{\},
+  fontsize=\small
+}

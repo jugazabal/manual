@@ -1,0 +1,124 @@
+/* Typography */
+body {
+  font-family: "Montserrat", "Georgia", serif;
+  line-height: 1.6;
+  font-size: 1.05rem;
+  background-color: #ffffff;
+  color: #000000;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Montserrat", "Georgia", serif;
+  font-weight: bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  color: #004b87;
+}
+
+/* Paragraph spacing */
+p {
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+  text-align: justify;
+}
+
+/* Lists */
+ul, ol {
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
+  padding-left: 1.5em;
+}
+
+/* Code blocks and inline code */
+pre, code {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  padding: 0.2em 0.4em;
+  font-size: 0.95rem;
+  font-family: "Courier New", monospace;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 0.5em;
+  text-align: left;
+}
+
+/* Block elements */
+
+.box {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin: 1em 0;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid #ccc;
+  background-color: #f9f9f9;
+  padding: 0.5em 1em;
+  font-style: italic;
+  margin: 1em 0;
+}
+
+body.quarto-dark {
+  background-color: #2b2929;
+  color: #e0e0e0;
+}
+
+body.quarto-dark h1,
+body.quarto-dark h2,
+body.quarto-dark h3,
+body.quarto-dark h4,
+body.quarto-dark h5,
+body.quarto-dark h6 {
+  color: #93c5fd;
+}
+
+body.quarto-dark pre,
+body.quarto-dark code {
+  background-color: #2a2a2a;
+  border-color: #444;
+}
+
+body.quarto-dark blockquote {
+  background-color: #2f2f2f;
+  border-left-color: #888;
+}
+
+body.quarto-dark table,
+body.quarto-dark th,
+body.quarto-dark td {
+  border-color: #555;
+}
+/* Style for code snippets */
+.custom-snippet {
+  font-family: 'Arial', monospace;
+  font-size: 1.05em;
+  color: #20a45a;
+}
+
+body.quarto-dark {
+  --bs-code-color: #20a45a !important;
+}
