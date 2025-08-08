@@ -27,6 +27,7 @@ format:
       dark: darkly
     css: styles.css
     toc: true
+    toc-depth: 3
     number-sections: true
     self-contained: true
     code-tools: true
@@ -37,22 +38,22 @@ format:
     smart: true
 
 
-  # pdf:
-  #   pdf-engine: lualatex   # Or "prince" or "lualatex"
-  #   toc: true
-  #   number-sections: true
-  #   margin-left: 25mm
-  #   margin-right: 25mm
-  #   margin-top: 20mm
-  #   margin-bottom: 20mm
-  #   include-in-header: preamble.tex
-
-  typst:
+  pdf:
+    pdf-engine: lualatex   # Or "prince" or "lualatex"
     toc: true
     number-sections: true
-    margin:
-      x: 25mm
-      y: 20mm
+    margin-left: 25mm
+    margin-right: 25mm
+    margin-top: 20mm
+    margin-bottom: 20mm
+    include-in-header: preamble.tex
+
+  # typst:
+  #   toc: true
+  #   number-sections: true
+  #   margin:
+  #     x: 25mm
+  #     y: 20mm
     # Note: Typst does not use LaTeX preambles. 
     # Customizations are done via Typst templates (.typ files).
 
@@ -163,35 +164,79 @@ Definition
 
 ¦ **Output:**
 
+
 ::: custom-snippet
-Definition\
-Definition\
-<br> Definition
+::: {.content-visible when-format="html"}
+
+Definition<br>
+Definition<br><br>
+Definition
+
+:::
+
+::: {.content-visible when-format="pdf"}
+
+Definition\ 
+
+Definition
+
+\vspace{1em}
+
+Definition
+
+:::
 :::
 
 ### Padding
 
-To get a padded text on the left of the page the following code is used:
+To create an indented (or "padded") block of text that works across all formats, you should use a fenced `Div` block with a custom class, like `:::{.indent}`.
 
 ¦ **Code:**
 
-```{html}
-<div style="padding-left:3em;"></div>
-# this is usually used after a section to visually separate it from the rest of the text:
-
+``` {html}
 <b>Definition</b>
+
 <div style="padding-left:3em;">
-    <b>F1a. Participation in social activities of long-standing interest</b> — The person engaged in social activities that have been of long-standing interest to him or her. The activities may be quite varied and should be counted as long as they involve interaction with at least one other person. Examples include attending meetings of informal clubs or religious services, playing bridge or bingo, volunteering at the local clothing bank, or gossiping with the neighbours on their front porches in the evening.
+<b>F1a. Participation in social activities of long-standing interest</b> — The person engaged in social activities that have been of long-standing interest to him or her. The activities may be quite varied and should be counted as long as they involve interaction with at least one other person. Examples include attending meetings of informal clubs or religious services, playing bridge or bingo, volunteering at the local clothing bank, or gossiping with the neighbours on their front porches in the evening.
 </div>
 ```
 
-¦ **Output:**
+**Output:**
 
-**Definition**
+::: {.content-visible when-format="html"}
+<b>Definition</b>
 
-::: indent
-**F1a. Participation in social activities of long-standing interest** — The person engaged in social activities that have been of long-standing interest to him or her. The activities may be quite varied and should be counted as long as they involve interaction with at least one other person. Examples include attending meetings of informal clubs or religious services, playing bridge or bingo, volunteering at the local clothing bank, or gossiping with the neighbours on their front porches in the evening.
+<div style="padding-left:3em;">
+<b>F1a. Participation in social activities of long-standing interest</b> — The person engaged in social activities that have been of long-standing interest to him or her. The activities may be quite varied and should be counted as long as they involve interaction with at least one other person. Examples include attending meetings of informal clubs or religious services, playing bridge or bingo, volunteering at the local clothing bank, or gossiping with the neighbours on their front porches in the evening.
+</div>
+
 :::
+
+::: {.content-visible when-format="pdf"}
+
+\noindent\textbf{Definition}
+
+\vspace{0.5em}
+
+\begin{flushleft}
+\hspace*{3em}%
+\begin{minipage}{\dimexpr\linewidth-3em}
+\textbf{F1a. Participation in social activities of long-standing interest} —  
+The person engaged in social activities that have been of long-standing interest to him or her. The activities may be quite varied and should be counted as long as they involve interaction with at least one other person. Examples include attending meetings of informal clubs or religious services, playing bridge or bingo, volunteering at the local clothing bank, or gossiping with the neighbours on their front porches in the evening.
+\end{minipage}
+\end{flushleft}
+
+
+
+:::
+
+
+
+
+
+
+
+
 
 ### Center / left / right positioned text
 
@@ -356,13 +401,13 @@ A box is coded using the `<div class="box"></div>` tag. This creates a standard 
 
 ¦ **Output:**
 
-::::: custom-snippet
+::: custom-snippet
 :::: box
 ::: {style="text-align: center;"}
 Example of How to Code Life Events
 :::
 ::::
-:::::
+:::
 
 ## Tables
 
@@ -491,7 +536,7 @@ However, there is no need to include the headings. On the manual, this section l
 
 ¦ **Output:**
 
-:::::: custom-snippet
+::: custom-snippet
 <b>AA1 Name of Client</b><br><br> <b>Intent</b>
 
 ::: {style="padding-left:3em;"}
@@ -509,7 +554,7 @@ Client’s legal name, which represents the full name of the person.
 ::: {style="padding-left:3em;"}
 Use printed letters. Enter in the following order: <br><br><b>a. Last/Family Name,</b><br> <b>b. First Name,</b><br> <b>c. Middle Name/Initial.</b><br> <br> If the client has no middle name/initial, leave item “c” blank.
 :::
-::::::
+:::
 
 ### Spacing between paragraphs
 
@@ -533,7 +578,7 @@ This is a text that would only serve to demonstrate the space between the list a
 
 ¦ **Output:**
 
-:::: custom-snippet
+::: custom-snippet
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
@@ -541,7 +586,7 @@ This is a text that would only serve to demonstrate the space between the list a
 :::
 
 This is a text that would only serve to demonstrate the space between the list and the following lines.
-::::
+:::
 
 -   If a new paragraph begins after the end of a list with padding style `<div style="padding-left:3em;"></div>` there is no need to use a single `<br>` space after the end of the list `<ul></ul>` or `<ol></ol>` or after `</div>` if no text is placed between `</ol>` and `</div>` as the browser will automatically make a space, and putting a space here would make the separation too wide.
 
@@ -570,7 +615,7 @@ This is a text that only serves to demonstrate the space between the list and th
 
 ¦ **Output:**
 
-:::: custom-snippet
+::: custom-snippet
 <b>A4. Marital Status</b> <br><br> <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
@@ -594,7 +639,7 @@ Choose the answer that describes the current marital status of the person. If th
 :::
 
 This is a text that only serves to demonstrate the space between the list and the following lines.
-::::
+:::
 
 ### Ordered and unordered lists
 
@@ -630,7 +675,7 @@ Enter the number corresponding to the reason for assessment.
 
 ¦ **Output:**
 
-::::: custom-snippet
+::: custom-snippet
 <b>A8. Reason for Assessment</b> <br><br>
 
 <b>Intent</b>
@@ -652,7 +697,7 @@ Enter the number corresponding to the reason for assessment. <br><br>
 
 <b>3. Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence. <br><br>
 :::
-:::::
+:::
 
 As seen on the example, the padded text after 'Coding' has the same indentation as the numbered paragraphs.
 
@@ -687,7 +732,7 @@ Enter the number corresponding to the reason for assessment.
 
 ¦ **Output:**
 
-::::: custom-snippet
+::: custom-snippet
 <b>A8. Reason for Assessment</b> <br><br>
 
 <b>Intent</b>
@@ -719,7 +764,7 @@ Enter the number corresponding to the reason for assessment. <br><br>
 
 <br><br>
 :::
-:::::
+:::
 
 Now the list appears nested under the padded text, with the text displaying three degrees of indentation.
 
@@ -798,7 +843,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 ¦ **Output:**
 
-:::: custom-snippet
+::: custom-snippet
 <b>A4. Marital Status</b> <br><br>
 
 <b>Coding</b>
@@ -808,7 +853,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 <b>1. Never married</b><br> <b>2. Married</b><br> <b>3. Partner/Significant other</b><br> <b>4. Widowed</b><br> <b>5. Separated</b><br> <b>6. Divorced</b>
 :::
-::::
+:::
 
 -   The same short paragraph in list form
 
@@ -839,7 +884,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 ¦ **Output:**
 
-:::: custom-snippet
+::: custom-snippet
 <b>A4. Marital Status</b> <br><br>
 
 <b>Coding</b>
@@ -863,7 +908,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 </ol>
 :::
-::::
+:::
 
 ### CAP manual
 
@@ -942,7 +987,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Output:
 
-:::: custom-snippet
+::: custom-snippet
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
@@ -950,7 +995,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 :::
 
 <br>
-::::
+:::
 
 ¦Example of a list with long sentences:
 
@@ -969,7 +1014,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Output:
 
-:::: custom-snippet
+::: custom-snippet
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
@@ -979,12 +1024,12 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 <b>2. Decline, distressed</b> — Both decline and distress are observed or reported.
 :::
-::::
+:::
 
 ### Availability of the interRAI instruments with CAP output in our main customer base
 
 | **interRAI Instrument** | **Finland** | **Switzerland** | **Canada** |
-|-----------------------|-----------------|-----------------|-----------------|
+|---------------------|-----------------|-----------------|-----------------|
 | Home Care (HC) | YES | YES | YES |
 | Long-Term Care Facilities (LTCF) | YES | YES | YES |
 | Acute Care (AC-CGA) | NO | YES | YES |
