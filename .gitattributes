@@ -1,0 +1,29 @@
+# Set default behavior, in case users don't have core.autocrlf set.
+# This will handle line endings automatically for files Git considers text.
+* text=auto
+
+#
+# The following are defined explicitly to be certain that they will be handled
+# as text files. They will be normalized to LF in the repository and converted
+# to the native line endings on checkout.
+#
+*.qmd      text
+*.md       text
+*.html     text
+*.css      text
+*.js       text
+*.typ      text
+*.tex      text
+*.csl      text
+*.json     text
+*.yml      text
+*.yaml     text
+*.txt      text
+*.code-workspace text
+
+# Denote all files that are truly binary and should not be modified.
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.pdf      binary

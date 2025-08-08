@@ -165,7 +165,7 @@ Definition
 ¦ **Output:**
 
 
-::: custom-snippet
+:::: custom-snippet
 ::: {.content-visible when-format="html"}
 
 Definition<br>
@@ -185,11 +185,11 @@ Definition
 Definition
 
 :::
-:::
+::::
 
 ### Padding
 
-To create an indented (or "padded") block of text that works across all formats, you should use a fenced `Div` block with a custom class, like `:::{.indent}`.
+To create an indented (or "padded") block of text that works across all formats, you should use a fenced `Div` block with a custom padding-left style, like `<div style="padding-left:3em;">`.
 
 ¦ **Code:**
 
@@ -201,7 +201,7 @@ To create an indented (or "padded") block of text that works across all formats,
 </div>
 ```
 
-**Output:**
+¦ **Output:**
 
 ::: {.content-visible when-format="html"}
 <b>Definition</b>
@@ -230,14 +230,6 @@ The person engaged in social activities that have been of long-standing interest
 
 :::
 
-
-
-
-
-
-
-
-
 ### Center / left / right positioned text
 
 Text can be centered by using the `<div style="text-align: center;">` tag. This is particularly useful in boxes and tables:
@@ -250,16 +242,14 @@ Text can be centered by using the `<div style="text-align: center;">` tag. This 
 
 ¦ **Output:**
 
-::: custom-snippet
-<!-- Demonstrating right-aligned text -->
+::: {.content-visible when-format="html"}
+<div style="text-align: center;">This is an example of a centered text</div>
+:::
 
-<p style="text-align: center;">
-
+::: {.content-visible when-format="pdf"}
+\begin{center}
 This is an example of a centered text
-
-</p>
-
-<br><br>
+\end{center}
 :::
 
 Placing the text to the left `<div style="text-align: left;">` or to the right `<div style="text-align: right;">` follows the same logic:
@@ -274,23 +264,26 @@ Placing the text to the left `<div style="text-align: left;">` or to the right `
 
 ¦ **Output:**
 
-::: custom-snippet
-<p style="text-align: left;">
+::: {.content-visible when-format="html"}
+<div style="text-align: left;">This is an example of a left aligned text</div>
+<br><br>
+<div style="text-align: right;">This is an example of a right aligned text</div>
 
+:::
+
+::: {.content-visible when-format="pdf"}
+\begin{flushleft}
 This is an example of a left aligned text
+\end{flushleft}
 
-</p>
-
-<p style="text-align: right;">
-
+\begin{flushright}
 This is an example of a right aligned text
-
-</p>
+\end{flushright}
 :::
 
 ### Blank spaces
 
-Blank spaces can be added when needed. To code a blank space we use `&nbsp;`:
+Blank spaces can be added when needed. To code a blank space we use `"&nbsp;"`:
 
 ¦ **Code:**
 
@@ -309,11 +302,20 @@ Example: 01.03.1942<br><br>
 
 ¦ **Output:**
 
-::: custom-snippet
-Example: 01.03.1942<br><br> \[ 0 \]\[ 1 \]      \[ 0 \]\[ 3 \]      \[ 1 \]\[ 9 \]\[ 4 \]\[ 2 \]<br>     
-
-  Day          Month             Year
+::: {.content-visible when-format="html"}
+Example: 01.03.1942<br><br>
+<span style="display: inline-block; width: 9ch; text-align: center;">[ 0 ][ 1 ]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 9ch; text-align: center;">[ 0 ][ 3 ]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 15ch; text-align: center;">[ 1 ][ 9 ][ 4 ][ 2 ]</span><br>
+<span style="display: inline-block; width: 9ch; text-align: center;">Day</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 9ch; text-align: center;">Month</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 15ch; text-align: center;">Year</span>
 :::
+
+::: {.content-visible when-format="pdf"}
+Example: 01.03.1942\
+\begin{tabular}{c@{\hspace{3em}}c@{\hspace{2.5em}}c}
+\texttt{[ 0 ][ 1 ]} & \texttt{[ 0 ][ 3 ]} & \texttt{[ 1 ][ 9 ][ 4 ][ 2 ]} \\
+Day & Month & Year
+\end{tabular}
+:::
+
 
 ## Lists
 
@@ -337,7 +339,8 @@ This area should be approached with sensitivity. The recording of the response s
 
 ¦ **Output:**
 
-::: custom-snippet
+:::: custom-snippet
+::: {.content-visible when-format="html"}
 This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
 
 <ul>
@@ -349,7 +352,24 @@ This area should be approached with sensitivity. The recording of the response s
 <li><b>G1e. Victim of emotional abuse</b> — Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.</li>
 
 </ul>
+
 :::
+::: {.content-visible when-format="pdf"}
+\noindent
+This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
+
+\vspace{0.8em}
+
+\begin{itemize}
+  \item \textbf{G1d. Victim of physical assault or abuse} --- Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).
+  
+  \vspace{0.5em}
+  
+  \item \textbf{G1e. Victim of emotional abuse} --- Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.
+\end{itemize}
+:::
+::::
+
 
 ### Ordered lists
 
@@ -368,7 +388,8 @@ This area should be approached with sensitivity. The recording of the response s
 
 ¦ **Output:**
 
-::: custom-snippet
+:::: custom-snippet
+::: {.content-visible when-format="html"}
 This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
 
 <ol>
@@ -380,7 +401,23 @@ This area should be approached with sensitivity. The recording of the response s
 <li><b>Victim of emotional abuse</b> — Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.</li>
 
 </ol>
+
 :::
+::: {.content-visible when-format="pdf"}
+\noindent
+This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
+
+\vspace{0.8em}
+
+\begin{enumerate}
+  \item \textbf{G1d. Victim of physical assault or abuse} --- Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).
+  
+  \vspace{0.5em}
+  
+  \item \textbf{G1e. Victim of emotional abuse} --- Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.
+\end{enumerate}
+:::
+::::
 
 # Boxes and tables
 
@@ -401,12 +438,21 @@ A box is coded using the `<div class="box"></div>` tag. This creates a standard 
 
 ¦ **Output:**
 
-::: custom-snippet
-:::: box
-::: {style="text-align: center;"}
+::: {.content-visible when-format="html"}
+::: {style="border: 1px solid #000; padding: 20px; margin: 20px auto; max-width: 85%; display: flex; justify-content: center; align-items: center;"}
 Example of How to Code Life Events
 :::
-::::
+:::
+
+::: {.content-visible when-format="pdf"}
+\begin{center}
+\fbox{%
+  \parbox{0.85\linewidth}{%
+    \centering
+    Example of How to Code Life Events
+  }%
+}
+\end{center}
 :::
 
 ## Tables
@@ -438,11 +484,43 @@ A table is composed of columns and rows. Rows are coded with `<tr></tr>` and eac
 
 ¦ **Output:**
 
-::: custom-snippet
-| Morning          | Afternoon       | Night     |
-|------------------|-----------------|-----------|
-| Make bed         | Visit to doctor | Socialize |
-| Grocery shopping | Watch movie     | Read      |
+
+::: {.content-visible when-format="html"}
+
+<table border="1">
+  <tr>
+    <th>Morning</th>
+    <th>Afternoon</th>
+    <th colspan="3">Night</th>
+  </tr>
+  <tr>
+    <td rowspan="2">Make bed</td>
+    <td>Visit to doctor</td>
+    <td colspan="3">Socialize</td>
+  </tr>
+  <tr>
+    <td>Grocery shopping</td>
+    <td>Watch movie</td>
+    <td>Read</td>
+    <td>Sleep</td>
+  </tr>
+</table>
+
+:::
+
+::: {.content-visible when-format="pdf"}
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Morning} & \textbf{Afternoon} & \multicolumn{3}{c|}{\textbf{Night}} \\
+\hline
+Make bed & Visit to doctor & \multicolumn{3}{c|}{Socialize} \\
+\hline
+Make bed & Grocery shopping & Watch movie & Read & Sleep \\
+\hline
+\end{tabular}
+\end{table}
 :::
 
 # General guidelines
