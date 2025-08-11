@@ -57,7 +57,11 @@ format:
     # Note: Typst does not use LaTeX preambles. 
     # Customizations are done via Typst templates (.typ files).
 
-  docx: default
+  docx:
+    toc: true
+    number-sections: true
+    reference-doc: reference.docx
+
         
 
 
