@@ -1,5 +1,7 @@
 ---
 title: "Manual Editor Boilerplate"
+title-block-banner: true
+logo: Vitec_Raisoft_Original.png
 author: 
   - name: "Juan Garcia"
     affiliation: "Vitec Raisoft"
@@ -12,14 +14,6 @@ mainfont: "Georgia"
 license: "Company Confidential"
 
 format:
-  # epub:
-  #   toc: true
-  #   toc-depth: 2
-  #   cover-image: "C:/Users/vijgia/OneDrive - Vitec Software Group AB (publ)/Documentos/Quarto/Test/cover.png"
-  #   css: styles.css
-  #   lang: en
-  #   epub-chapter-level: 2
-
   html:
     allow-html: true
     theme: 
@@ -29,15 +23,15 @@ format:
     toc: true
     toc-depth: 3
     number-sections: true
-    self-contained: true
+    self-contained: false
     code-tools: true
-    code-copy: true
+    code-copy: hover
     embed-resources: true
     mermaid: 
       theme: forest
     smart: true
-
-
+    
+   
   pdf:
     pdf-engine: lualatex   # Or "prince" or "lualatex"
     toc: true
@@ -48,44 +42,14 @@ format:
     margin-bottom: 20mm
     include-in-header: preamble.tex
 
-  # typst:
-  #   toc: true
-  #   number-sections: true
-  #   margin:
-  #     x: 25mm
-  #     y: 20mm
-    # Note: Typst does not use LaTeX preambles. 
-    # Customizations are done via Typst templates (.typ files).
 
   docx:
     toc: true
     number-sections: true
     reference-doc: reference.docx
-
-        
-
-
+   
 editor: visual
 
-# csl: apa
-# cover-image: "C:/Users/vijgia/OneDrive - Vitec Software Group AB (publ)/Documentos/Quarto/Test/cover.png"
-# output-file: "my-ebook"
-
-# project:
-#   type: book
-#   output-dir: _ebook
-
-# book:
-#   title: "Manual Editor Boilerplate"
-#   author: "Juan Garcia"
-#   chapters:
-#     - index.qmd
-#     - 01-Typography.qmd
-#     - 02-background.qmd
-#     - 03-methods.qmd
-#     - 04-results.qmd
-#     - 05-discussion.qmd
-#     - references.qmd
 ---
 
 # Text formatting
@@ -100,7 +64,7 @@ The bold font is coded using the `<b></b>` pair:
 
 ¦ **Code:**
 
-```{html}
+``` html
 <b>Definition</b> 
 ```
 
@@ -114,7 +78,7 @@ The italic font is coded using the `<i></i>` pair:
 
 ¦ <b>Code:</b>
 
-```{html}
+``` html
 <i>Definition</i>
 ```
 
@@ -128,7 +92,7 @@ The bold and italic fonts can be combined in a single instance:
 
 ¦ **Code:**
 
-```{html}
+``` html
 <b><i>Definition</i></b>
 ```
 
@@ -158,7 +122,7 @@ Line breaks are coded using the `<br>` format. It can be used repeatedly to make
 
 ¦ **Code:**
 
-```{html}
+``` html
 Definition
 <br> # one line break
 Definition
@@ -189,6 +153,20 @@ Definition
 Definition
 
 :::
+
+::: {.content-visible when-format="docx"}
+
+```{=openxml}
+<w:p>
+  <w:r><w:t>Definition</w:t></w:r>
+  <w:r><w:br/></w:r>
+  <w:r><w:t>Definition</w:t></w:r>
+  <w:r><w:br/><w:br/></w:r>
+  <w:r><w:t>Definition</w:t></w:r>
+</w:p>
+```
+
+:::
 ::::
 
 ### Padding
@@ -197,7 +175,7 @@ To create an indented (or "padded") block of text that works across all formats,
 
 ¦ **Code:**
 
-``` {html}
+```  html
 <b>Definition</b>
 
 <div style="padding-left:3em;">
@@ -208,6 +186,7 @@ To create an indented (or "padded") block of text that works across all formats,
 ¦ **Output:**
 
 ::: {.content-visible when-format="html"}
+
 <b>Definition</b>
 
 <div style="padding-left:3em;">
@@ -230,8 +209,29 @@ The person engaged in social activities that have been of long-standing interest
 \end{minipage}
 \end{flushleft}
 
+:::
 
+::: {.content-visible when-format="docx"}
 
+```{=openxml}
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>Definition</w:t>
+  </w:r>
+</w:p>
+
+<w:p>
+  <w:pPr>
+    <w:ind w:left="720"/> <!-- 720 twips = 0.5 inch indent -->
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>F1a. Participation in social activities of long-standing interest</w:t>
+  </w:r>
+  <w:r><w:t> — The person engaged in social activities that have been of long-standing interest to him or her. The activities may be quite varied and should be counted as long as they involve interaction with at least one other person. Examples include attending meetings of informal clubs or religious services, playing bridge or bingo, volunteering at the local clothing bank, or gossiping with the neighbours on their front porches in the evening.</w:t></w:r>
+</w:p>
+```
 :::
 
 ### Center / left / right positioned text
@@ -240,27 +240,45 @@ Text can be centered by using the `<div style="text-align: center;">` tag. This 
 
 ¦ **Code:**
 
-```{html}
+``` html
 <div style="text-align: center;">This is an example of a centered text</div>
 ```
 
 ¦ **Output:**
 
 ::: {.content-visible when-format="html"}
+
 <div style="text-align: center;">This is an example of a centered text</div>
+
 :::
 
 ::: {.content-visible when-format="pdf"}
+
 \begin{center}
 This is an example of a centered text
 \end{center}
+
+:::
+
+::: {.content-visible when-format="docx"}
+
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:jc w:val="center"/> <!-- center alignment -->
+  </w:pPr>
+  <w:r>
+    <w:t>This is an example of a centered text</w:t>
+  </w:r>
+</w:p>
+```
 :::
 
 Placing the text to the left `<div style="text-align: left;">` or to the right `<div style="text-align: right;">` follows the same logic:
 
 ¦ **Code:**
 
-```{html}
+``` html
 <div style="text-align: left;">This is an example of a left aligned text</div>
 <br><br>
 <div style="text-align: right;">This is an example of a right aligned text</div>
@@ -269,6 +287,7 @@ Placing the text to the left `<div style="text-align: left;">` or to the right `
 ¦ **Output:**
 
 ::: {.content-visible when-format="html"}
+
 <div style="text-align: left;">This is an example of a left aligned text</div>
 <br><br>
 <div style="text-align: right;">This is an example of a right aligned text</div>
@@ -285,19 +304,41 @@ This is an example of a right aligned text
 \end{flushright}
 :::
 
+
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:jc w:val="left"/>
+  </w:pPr>
+  <w:r>
+    <w:t>This is an example of a left aligned text</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:jc w:val="right"/>
+  </w:pPr>
+  <w:r>
+    <w:t>This is an example of a right aligned text</w:t>
+  </w:r>
+</w:p>
+```
+:::
+
 ### Blank spaces
 
-Blank spaces can be added when needed. To code a blank space we use `"&nbsp;"`:
+Blank spaces can be added when needed. To code a blank space we use "&nbsp;":
 
 ¦ **Code:**
 
-```{html}
+``` html
 &nbsp;
 ```
 
 Blank spaces can be put together in the same way as line breaks (this is helpful when writing dates):
 
-```{html}
+``` html
 Example: 01.03.1942<br><br>
 [ 0 ][ 1 ]&nbsp;&nbsp;[ 0 ][ 3 ]&nbsp;&nbsp; [ 1 ][ 9 ][ 4 ][ 2 ]<br>
 
@@ -308,8 +349,9 @@ Example: 01.03.1942<br><br>
 
 ::: {.content-visible when-format="html"}
 Example: 01.03.1942<br><br>
-<span style="display: inline-block; width: 9ch; text-align: center;">[ 0 ][ 1 ]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 9ch; text-align: center;">[ 0 ][ 3 ]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 15ch; text-align: center;">[ 1 ][ 9 ][ 4 ][ 2 ]</span><br>
-<span style="display: inline-block; width: 9ch; text-align: center;">Day</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 9ch; text-align: center;">Month</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 15ch; text-align: center;">Year</span>
+<span style="display: inline-block; width: 9ch; text-align: center;">[ 0 ][ 1 ]</span><span style="display: inline-block; width: 9ch; text-align: center;">[ 0 ][ 3 ]</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 15ch; text-align: center;">[ 1 ][ 9 ][ 4 ][ 2 ]</span><br>
+<span style="display: inline-block; width: 9ch; text-align: center;">Day</span><span style="display: inline-block; width: 9ch; text-align: center;">Month</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="display: inline-block; width: 15ch; text-align: center;">Year</span>
+
 :::
 
 ::: {.content-visible when-format="pdf"}
@@ -320,6 +362,16 @@ Day & Month & Year
 \end{tabular}
 :::
 
+::: {.content-visible when-format="docx"}
+
+Example: 01.03.1942
+
+|   |   |   |
+|:---:|:---:|:---:|
+| [ 0 ] [ 1 ] | [ 0 ] [ 3 ] | [ 1 ] [ 9 ] [ 4 ] [ 2 ] |
+| Day | Month | Year |
+
+:::
 
 ## Lists
 
@@ -331,7 +383,7 @@ Unordered lists are coded using the `<ul></ul>` pair. Each section (or row) is m
 
 ¦ **Code:**
 
-```{html}
+``` html
 
 This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
 <ul>
@@ -351,13 +403,14 @@ This area should be approached with sensitivity. The recording of the response s
 
 <li><b>G1d. Victim of physical assault or abuse</b> — Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).</li>
 
-<br>
+
 
 <li><b>G1e. Victim of emotional abuse</b> — Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.</li>
 
 </ul>
 
 :::
+
 ::: {.content-visible when-format="pdf"}
 \noindent
 This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
@@ -372,6 +425,51 @@ This area should be approached with sensitivity. The recording of the response s
   \item \textbf{G1e. Victim of emotional abuse} --- Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.
 \end{itemize}
 :::
+
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:p>
+  <w:r>
+    <w:t>This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:numPr>
+      <w:ilvl w:val="0"/>
+      <w:numId w:val="1"/>
+    </w:numPr>
+  </w:pPr>
+  <w:r>
+    <w:rPr>
+      <w:b/>
+    </w:rPr>
+    <w:t>G1d.  Victim of physical assault or abuse</w:t>
+  </w:r>
+  <w:r>
+    <w:t> — Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).</w:t>
+  </w:r>
+</w:p>
+<w:p/>
+<w:p>
+  <w:pPr>
+    <w:numPr>
+      <w:ilvl w:val="0"/>
+      <w:numId w:val="1"/>
+    </w:numPr>
+  </w:pPr>
+  <w:r>
+    <w:rPr>
+      <w:b/>
+    </w:rPr>
+    <w:t>G1e. Victim of emotional abuse</w:t>
+  </w:r>
+  <w:r>
+    <w:t> — Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.</w:t>
+  </w:r>
+</w:p>
+```
+:::
 ::::
 
 
@@ -381,7 +479,7 @@ Ordered lists add a consecutive number (starting from '1') to every block of the
 
 ¦ **Code:**
 
-```{html}
+``` html
 This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
 <ol>
 <li><b>Victim of physical assault or abuse</b> — Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).</li>
@@ -400,13 +498,14 @@ This area should be approached with sensitivity. The recording of the response s
 
 <li><b>Victim of physical assault or abuse</b> — Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).</li>
 
-<br>
+
 
 <li><b>Victim of emotional abuse</b> — Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.</li>
 
 </ol>
 
 :::
+
 ::: {.content-visible when-format="pdf"}
 \noindent
 This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
@@ -421,6 +520,14 @@ This area should be approached with sensitivity. The recording of the response s
   \item \textbf{G1e. Victim of emotional abuse} --- Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.
 \end{enumerate}
 :::
+
+::: {.content-visible when-format="docx"}
+This area should be approached with sensitivity. The recording of the response should not reflect what you believe may have occurred but rather what the person or the record indicates.
+
+1. **Victim of physical assault or abuse**— Any form of physical abuse experienced by the person, regardless of his or her age when the incident(s) occurred (for example, any incident resulting in non-accidental injury, physical confinement, excessive physical discipline, or withdrawal of necessities of life, such as food and shelter).
+
+2. **Victim of emotional abuse**— Person has been in a pervasive and hostile emotional environment created by an abuser for the purposes of control. The abused person’s self-esteem, identity, energy, ability to feel and question, wants, and needs are invalidated by the abuser.
+:::
 ::::
 
 # Boxes and tables
@@ -433,7 +540,7 @@ A box is coded using the `<div class="box"></div>` tag. This creates a standard 
 
 ¦ **Code:**
 
-```{html}
+``` html
 <div class="box">
     <div style="text-align: center;">Example of How to Code Life Events
     </div>
@@ -442,6 +549,7 @@ A box is coded using the `<div class="box"></div>` tag. This creates a standard 
 
 ¦ **Output:**
 
+:::: custom-snippet
 ::: {.content-visible when-format="html"}
 ::: {style="border: 1px solid #000; padding: 20px; margin: 20px auto; max-width: 85%; display: flex; justify-content: center; align-items: center;"}
 Example of How to Code Life Events
@@ -459,13 +567,34 @@ Example of How to Code Life Events
 \end{center}
 :::
 
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:p>
+  <w:pPr>
+    <w:pBdr>
+      <w:top w:val="single" w:sz="4" w:space="4" w:color="auto"/>
+      <w:left w:val="single" w:sz="4" w:space="4" w:color="auto"/>
+      <w:bottom w:val="single" w:sz="4" w:space="4" w:color="auto"/>
+      <w:right w:val="single" w:sz="4" w:space="4" w:color="auto"/>
+    </w:pBdr>
+    <w:jc w:val="center"/>
+  </w:pPr>
+  <w:r>
+    <w:t>Example of How to Code Life Events</w:t>
+  </w:r>
+</w:p>
+```
+:::
+::::
+
+
 ## Tables
 
 A table is composed of columns and rows. Rows are coded with `<tr></tr>` and each row can have several cells in succession, one for each column, using `<td></td>` to mark each cell. If the user wants the top cell to act as a header, then the code for the cell changes to `<th></th>`. If needed, the length of a cell can be changed using `colspan="3"` with the desired width, counting in numbers of cells that that particular cell spans (by changing the number '3'). The width of the row can be defined using `rowspan="2"` also with the desired number of cells on the row that the cell in question will span. In practice, it is coded like this:
 
 ¦ **Code:**
 
-```{html}
+``` html
 <table border="1">
   <tr>
     <th>Morning</th>
@@ -488,7 +617,7 @@ A table is composed of columns and rows. Rows are coded with `<tr></tr>` and eac
 
 ¦ **Output:**
 
-
+:::: custom-snippet
 ::: {.content-visible when-format="html"}
 
 <table border="1">
@@ -527,6 +656,123 @@ Make bed & Grocery shopping & Watch movie & Read & Sleep \\
 \end{table}
 :::
 
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:tbl>
+  <w:tblPr>
+    <w:tblBorders>
+      <w:top w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+      <w:left w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+      <w:bottom w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+      <w:right w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+      <w:insideH w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+      <w:insideV w:val="single" w:sz="4" w:space="0" w:color="auto"/>
+    </w:tblBorders>
+  </w:tblPr>
+  <w:tblGrid>
+    <w:gridCol w:w="1200"/>
+    <w:gridCol w:w="1200"/>
+    <w:gridCol w:w="1200"/>
+    <w:gridCol w:w="1200"/>
+    <w:gridCol w:w="1200"/>
+  </w:tblGrid>
+  <w:tr>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:rPr><w:b/></w:rPr>
+          <w:t>Morning</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:rPr><w:b/></w:rPr>
+          <w:t>Afternoon</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:gridSpan w:val="3"/>
+      </w:tcPr>
+      <w:p>
+        <w:r>
+          <w:rPr><w:b/></w:rPr>
+          <w:t>Night</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Make bed</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Visit to doctor</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:tcPr>
+        <w:gridSpan w:val="3"/>
+      </w:tcPr>
+      <w:p>
+        <w:r>
+          <w:t>Socialize</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+  <w:tr>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Make bed</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Grocery shopping</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Watch movie</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Read</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+    <w:tc>
+      <w:p>
+        <w:r>
+          <w:t>Sleep</w:t>
+        </w:r>
+      </w:p>
+    </w:tc>
+  </w:tr>
+</w:tbl>
+```
+:::
+::::
+
 # General guidelines
 
 ## Format
@@ -539,7 +785,7 @@ The manual is usually structured in several sections that follow a regular patte
 
 ¦ **Code:**
 
-```{html}
+``` html
 <b>Title</b><br><br>
 
 <b>Intent</b>
@@ -583,7 +829,7 @@ However, there is no need to include the headings. On the manual, this section l
 
 ¦ **Code:**
 
-```{html}
+``` html
 <b>A1. Name</b>
 <br><br>
 
@@ -611,32 +857,180 @@ However, there is no need to include the headings. On the manual, this section l
     <b>b. First Name,</b><br>
     <b>c. Middle Name/Initial.</b><br>
     <br>
-    If the client has no middle
-    name/initial, leave item “c” blank.
+    If the client has no middle initial, leave item “c” blank.
 </div>
 ```
 
 ¦ **Output:**
 
-::: custom-snippet
-<b>AA1 Name of Client</b><br><br> <b>Intent</b>
+:::: custom-snippet
+::: {.content-visible when-format="html"}
 
-::: {style="padding-left:3em;"}
-To record the name of the client receiving services from the home care agency.
+<b>A1. Name</b>
+<br>
+
+<b>Definition</b>
+<p>Person's legal name.</p>
+
+<b>AA1 Name of Client</b><br>
+<b>Intent</b>
+<p class="indented">
+    To record the name of the client receiving services from the home
+    care agency.
+</p>
+<b>Definition</b>
+<p class="indented">
+    Client’s legal name, which represents the full name of the person.
+</p>
+
+<b>Coding</b>
+<p class="indented">
+    Use printed letters. Enter in the following order: <br>
+    <b>a. Last/Family Name,</b><br>
+    <b>b. First Name,</b><br>
+    <b>c. Middle Name/Initial.</b>
+</p>
+<p class="indented">If the client has no middle initial, leave item “c” blank.</p>
+
 :::
 
-<br> <b>Definition</b>
+    
+::: {.content-visible when-format="pdf"}
 
-::: {style="padding-left:3em;"}
-Client’s legal name, which represents the full name of the person.
+
+\textbf{A1. Name}
+
+\textbf{Definition}
+\par\indent\hspace{3em}Person’s legal name.
+
+\textbf{AA1 Name of Client}
+
+\textbf{Intent}
+\par\indent\hspace{3em}To record the name of the client receiving services from the home care agency.
+
+\textbf{Definition}
+\par\indent\hspace{3em}Client’s legal name, which represents the full name of the person.
+
+\textbf{Coding}
+\par\indent\hspace{3em}Use printed letters. Enter in the following order:
+
+\par\indent\hspace{3em}\textbf{a. Last/Family Name,}
+\par\indent\hspace{3em}\textbf{b. First Name,}
+\par\indent\hspace{3em}\textbf{c. Middle Name/Initial.}
+
+\par\indent\hspace{3em}If the client has no middle initial, leave item “c” blank.
+
+
 :::
 
-<br> <b>Coding</b>
-
-::: {style="padding-left:3em;"}
-Use printed letters. Enter in the following order: <br><br><b>a. Last/Family Name,</b><br> <b>b. First Name,</b><br> <b>c. Middle Name/Initial.</b><br> <br> If the client has no middle name/initial, leave item “c” blank.
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>A1. Name</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>Definition</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:t>Person’s legal name.</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>AA1 Name of Client</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>Intent</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:t>To record the name of the client receiving services from the home care agency.</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>Definition</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:t>Client’s legal name, which represents the full name of the person.</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>Coding</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:t>Use printed letters. Enter in the following order:</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>a. Last/Family Name,</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>b. First Name,</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>c. Middle Name/Initial.</w:t>
+  </w:r>
+</w:p>
+<w:p>
+  <w:pPr>
+    <w:ind w:left="1080"/>
+  </w:pPr>
+  <w:r>
+    <w:t>If the client has no middle initial, leave item “c” blank.</w:t>
+  </w:r>
+</w:p>
+```
 :::
-:::
+::::
 
 ### Spacing between paragraphs
 
@@ -648,33 +1042,61 @@ To get a coherent look on all the manuals, please adhere to the following rules 
 
 ¦ **Example code:**
 
-```{html}
+``` html
 <b>Coding</b>
 <div style="padding-left:3em;">
     <b>M. Male</b><br>
     <b>F. Female</b><br>
     <b>UN. Not assigned male or female</b>
 </div><br>
-This is a text that would only serve to demonstrate the space between the list and the following lines.
+This is a text that only serves to demonstrate the space between the list and the following lines.
 ```
 
 ¦ **Output:**
 
-::: custom-snippet
-<b>Coding</b>
+:::: custom-snippet
+::: {.content-visible when-format="html"}
 
-::: {style="padding-left:3em;"}
-<b>M. Male</b><br> <b>F. Female</b><br> <b>UN. Not assigned male or female</b>
+<p class="indented"><b>Coding</b><br>
+    <b>M. Male</b><br>
+    <b>F. Female</b><br>
+    <b>UN. Not assigned male or female</b>
+<br>
+This is a text that only serves to demonstrate the space between the list and the following lines.
+</p>
+
+:::
+::::
+
+::: {.content-visible when-format="pdf"}
+
+\textbf{Coding}
+\par\noindent\hspace{6em}\textbf{M.} Male
+\par\noindent\hspace{6em}\textbf{F.} Female
+\par\noindent\hspace{6em}\textbf{UN.} Not assigned male or female
+
+\par\noindent\hspace{3em}This is a text that serves to demonstrate the space between the list and the following lines.
+
 :::
 
-This is a text that would only serve to demonstrate the space between the list and the following lines.
+::: {.content-visible when-format="docx"}
+
+**Coding**
+
+> **M.** Male  
+> **F.** Female  
+> **UN.** Not assigned male or female
+
+This is a text that would serves to demonstrate the space between the list and the following lines.
+
 :::
+
 
 -   If a new paragraph begins after the end of a list with padding style `<div style="padding-left:3em;"></div>` there is no need to use a single `<br>` space after the end of the list `<ul></ul>` or `<ol></ol>` or after `</div>` if no text is placed between `</ol>` and `</div>` as the browser will automatically make a space, and putting a space here would make the separation too wide.
 
 ¦ **Example code:**
 
-```{html}
+``` html
 <b>A4. Marital Status</b>
 <br><br>
 
@@ -697,7 +1119,8 @@ This is a text that only serves to demonstrate the space between the list and th
 
 ¦ **Output:**
 
-::: custom-snippet
+:::: custom-snippet
+::: {.content-visible when-format="html"}
 <b>A4. Marital Status</b> <br><br> <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
@@ -718,10 +1141,100 @@ Choose the answer that describes the current marital status of the person. If th
 <li><b>Divorced</b></li>
 
 </ol>
+
 :::
+This is a text that only serves to demonstrate the space between the list and the following lines.
+:::
+
+::: {.content-visible when-format="pdf"}  
+\begin{adjustwidth}{3em}{0pt}
+Choose the answer that describes the current marital status of the person. 
+If the person is in a common-law relationship, score the item ``\textbf{2}'' for ``Married''. 
+If the person is in a same-sex relationship that is legally recognized as a marriage, 
+score the item ``\textbf{2}'' for ``Married''. 
+If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, 
+score the item ``\textbf{3}'' for ``Partner/significant other''.
+
+\vspace{0.5em}
+
+\begin{enumerate}
+    \item \textbf{Never married}
+    \item \textbf{Married}
+    \item \textbf{Partner/Significant other}
+    \item \textbf{Widowed}
+    \item \textbf{Separated}
+    \item \textbf{Divorced}
+\end{enumerate}
+\end{adjustwidth}
 
 This is a text that only serves to demonstrate the space between the list and the following lines.
 :::
+
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>A4. Marital Status</w:t>
+  </w:r>
+</w:p>
+
+<w:p>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>Coding</w:t>
+  </w:r>
+</w:p>
+
+<w:p>
+  <w:pPr>
+    <w:ind w:left="864"/>
+  </w:pPr>
+  <w:r>
+    <w:t>Choose the answer that describes the current marital status of the person. If the person is in a common-law relationship, score the item “</w:t>
+  </w:r>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>2</w:t>
+  </w:r>
+  <w:r>
+    <w:t>” for “Married”. If the person is in a same-sex relationship that is legally recognized as a marriage, score the item “</w:t>
+  </w:r>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>2</w:t>
+  </w:r>
+  <w:r>
+    <w:t>” for “Married”. If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, score the item “</w:t>
+  </w:r>
+  <w:r>
+    <w:rPr><w:b/></w:rPr>
+    <w:t>3</w:t>
+  </w:r>
+  <w:r>
+    <w:t>” for “Partner/significant other”.</w:t>
+  </w:r>
+</w:p>
+```
+:::
+
+1. Never married
+2. Married
+3. Partner/Significant other
+4. Widowed
+5. Separated
+6. Divorced
+
+::: {.content-visible when-format="docx"}
+```{=openxml}
+<w:p>
+  <w:r>
+    <w:t>This is a text that only serves to demonstrate the space between the list and the following lines.</w:t>
+  </w:r>
+</w:p>
+```
+:::
+::::
 
 ### Ordered and unordered lists
 
@@ -731,7 +1244,7 @@ Lists will result in a different formatting on the browser, as opposed to simply
 
 ¦ **Example code:**
 
-```{html}
+``` html
 <b>A8. Reason for Assessment</b>
 <br><br>
 
@@ -744,7 +1257,7 @@ To document the reason for completing the assessment.
 <b>Coding</b>
 <div style="padding-left:3em;">
 Enter the number corresponding to the reason for assessment.
-<br><br>
+<br>
 
 <b>1. 	First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.
 <br><br>
@@ -757,8 +1270,8 @@ Enter the number corresponding to the reason for assessment.
 
 ¦ **Output:**
 
-::: custom-snippet
-<b>A8. Reason for Assessment</b> <br><br>
+:::: custom-snippet
+<b>A8. Reason for Assessment</b> <br>
 
 <b>Intent</b>
 
@@ -766,20 +1279,21 @@ Enter the number corresponding to the reason for assessment.
 To document the reason for completing the assessment.
 :::
 
-<br>
+
 
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
-Enter the number corresponding to the reason for assessment. <br><br>
+Enter the number corresponding to the reason for assessment. <br>
 
-<b>1. First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services. <br><br>
+<b>1. First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services. <br>
 
-<b>2. Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current. <br><br>
+<b>2. Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current. <br>
 
-<b>3. Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence. <br><br>
+<b>3. Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence. <br>
+
 :::
-:::
+::::
 
 As seen on the example, the padded text after 'Coding' has the same indentation as the numbered paragraphs.
 
@@ -787,7 +1301,7 @@ If we were to use an ordered list on the same text, we would get the following:
 
 ¦ **Code:**
 
-```{html}
+``` html
 <b>A8. Reason for Assessment</b>
 <br><br>
 
@@ -814,8 +1328,8 @@ Enter the number corresponding to the reason for assessment.
 
 ¦ **Output:**
 
-::: custom-snippet
-<b>A8. Reason for Assessment</b> <br><br>
+:::: custom-snippet
+<b>A8. Reason for Assessment</b> <br>
 
 <b>Intent</b>
 
@@ -823,30 +1337,31 @@ Enter the number corresponding to the reason for assessment.
 To document the reason for completing the assessment.
 :::
 
-<br>
+
 
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
-Enter the number corresponding to the reason for assessment. <br><br>
+Enter the number corresponding to the reason for assessment. <br>
 
 <ol>
 
 <li><b>First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.</li>
 
-<br>
+
 
 <li><b>Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current.</li>
 
-<br>
+
 
 <li><b>Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence.</li>
 
 </ol>
 
 <br><br>
+
 :::
-:::
+::::
 
 Now the list appears nested under the padded text, with the text displaying three degrees of indentation.
 
@@ -858,7 +1373,7 @@ An ordered list could be used when nested inside a section containing only the l
 
 ¦ **Code:**
 
-```{html}
+``` html
 <b>Coding</b>
 <ol>
   <li><b>First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.</li><br>
@@ -873,25 +1388,26 @@ An ordered list could be used when nested inside a section containing only the l
 
 ¦ **Output:**
 
-::: custom-snippet
+:::: custom-snippet
 <b>Coding</b>
 
 <ol>
 
 <li><b>First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.</li>
 
-<br>
+
 
 <li><b>Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current.</li>
 
-<br>
+
 
 <li><b>Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence.</li>
 
-<br>
+
 
 </ol>
-:::
+
+::::
 
 -   Use of spaces after items on a list or numbered paragraph
 
@@ -903,7 +1419,7 @@ However, short numbered items should use only one space `<br>` and short lists i
 
 ¦ **Code:**
 
-```{html}
+``` html
 # Here is an example of a short numbered paragraph
 <b>A4. Marital Status</b>
 <br><br>
@@ -915,7 +1431,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 <b>1.	Never married</b><br>
 <b>2.	Married</b><br>
-<b>3. 	Partner/Significant other</b><br>
+<b>3.   Partner / Significant other</b><br>
 <b>4.	Widowed</b><br>
 <b>5.	Separated</b><br>
 <b>6.	Divorced</b>
@@ -925,7 +1441,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 ¦ **Output:**
 
-::: custom-snippet
+:::: custom-snippet
 <b>A4. Marital Status</b> <br><br>
 
 <b>Coding</b>
@@ -934,14 +1450,15 @@ Choose the answer that describes the current marital status of the person. If th
 Choose the answer that describes the current marital status of the person. If the person is in a common-law relationship, score the item “<b>2</b>” for “Married”. If the person is in a same-sex relationship that is legally recognized as a marriage, score the item “<b>2</b>” for “Married”. If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, score the item “<b>3</b>” for “Partner/significant other”. <br><br>
 
 <b>1. Never married</b><br> <b>2. Married</b><br> <b>3. Partner/Significant other</b><br> <b>4. Widowed</b><br> <b>5. Separated</b><br> <b>6. Divorced</b>
+
 :::
-:::
+::::
 
 -   The same short paragraph in list form
 
 ¦ **Code:**
 
-```{html}
+``` html
 <div class="custom-snippet">
 <b>A4. Marital Status</b>
 <br><br>
@@ -966,7 +1483,7 @@ Choose the answer that describes the current marital status of the person. If th
 
 ¦ **Output:**
 
-::: custom-snippet
+:::: custom-snippet
 <b>A4. Marital Status</b> <br><br>
 
 <b>Coding</b>
@@ -989,8 +1506,9 @@ Choose the answer that describes the current marital status of the person. If th
 <li><b>Divorced</b></li>
 
 </ol>
+
 :::
-:::
+::::
 
 ### CAP manual
 
@@ -1055,7 +1573,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Example of a list with short sentences:
 
-```{html}
+``` html
 <b>Coding</b>
 <div style="padding-left:3em;">
 <b>0. 	Never</b><br>
@@ -1069,19 +1587,21 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Output:
 
-::: custom-snippet
+:::: custom-snippet
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
 <b>0. Never</b><br> <b>1. More than 30 days ago</b><br> <b>2. 8 to 30 days ago</b><br> <b>3. 4 to 7 days ago</b><br> <b>4. In last 3 days</b><br> <b>8. Unable to determine</b>
+
 :::
 
 <br>
-:::
+
+::::
 
 ¦Example of a list with long sentences:
 
-```{html}
+``` html
 <b>Coding</b>
 <div style="padding-left:3em;">
 <b>0. 	No decline</b> — There was no change or there was an increase in the person’s level of participation in social activities.
@@ -1096,7 +1616,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Output:
 
-::: custom-snippet
+:::: custom-snippet
 <b>Coding</b>
 
 ::: {style="padding-left:3em;"}
@@ -1105,8 +1625,9 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 <b>1. Decline, not distressed</b> — The person experienced a decline in his or her level of participation in social activities without a corresponding increase in his or her distress. <br><br>
 
 <b>2. Decline, distressed</b> — Both decline and distress are observed or reported.
+
 :::
-:::
+::::
 
 ### Availability of the interRAI instruments with CAP output in our main customer base
 
@@ -1141,9 +1662,9 @@ You can render LaTeX mathematical expressions using [KaTeX](https://khan.github.
 
 The *Gamma function* satisfying $\Gamma(n) = (n-1)!\quad\forall n\in\mathbb N$ is via the Euler integral
 
-$$
+$
 \Gamma(z) = \int_0^\infty t^{z-1}e^{-t}dt\,.
-$$
+$
 
 > You can find more information about **LaTeX** mathematical expressions [here](http://meta.math.stackexchange.com/questions/5020/mathjax-basic-tutorial-and-quick-reference).
 
@@ -1193,8 +1714,10 @@ This is an example of a callout with a custom title.
 This is a default callout with no type specified.
 :::
 
-::: {.callout-caution collapse="true"}
+
 ## Expand To Learn About Collapse
+
+::: {.callout-caution collapse="true"}
 
 This is an example of a 'folded' caution callout that can be expanded by the user. You can use `collapse="true"` to collapse it by default or `collapse="false"` to make a collapsible callout that is expanded by default.
 :::

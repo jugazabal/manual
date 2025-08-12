@@ -122,3 +122,153 @@ body.quarto-dark td {
 body.quarto-dark {
   --bs-code-color: #20a45a !important;
 }
+
+/* Logo on banner - TOP LEFT */
+div.quarto-title-banner.page-columns.page-full {
+  background-image: url('Vitec_Raisoft_Original.png');
+  background-repeat: no-repeat;
+  background-position: 20px 15px;
+  background-size: auto 50px;
+  min-height: 120px; /* Make banner taller */
+}
+
+/* Push the entire title section down */
+.quarto-title-banner .quarto-title.column-body {
+  margin-top: 70px !important;
+  padding-top: 0 !important;
+}
+
+/* Alternative: target the title block specifically */
+.quarto-title-banner .quarto-title-block {
+  margin-top: 5px !important;
+  padding-left: 20px;
+}
+/* Dark mode styles for Mermaid - Updated to match your existing pattern */
+body.quarto-dark .mermaid .edge-thickness-normal {
+  stroke: white !important;
+}
+
+body.quarto-dark .mermaid .edge-pattern-solid {
+  stroke: white !important;
+}
+
+body.quarto-dark .mermaid .marker {
+  fill: white !important;
+}
+
+/* ===== MERMAID DARK MODE STYLES - CONSOLIDATED ===== */
+
+/* Lines and Arrows */
+body.quarto-dark div[id^="mermaid-"] .messageLine0,
+body.quarto-dark div[id^="mermaid-"] .messageLine1,
+body.quarto-dark div[id^="mermaid-"] .messageLine2,
+body.quarto-dark div[id^="mermaid-"] .messageLine3,
+body.quarto-dark div[id^="mermaid-"] .messageLine4,
+body.quarto-dark div[id^="mermaid-"] .messageLine5 {
+  stroke: white !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: none !important;
+}
+
+body.quarto-dark [id^="mermaid-"] line[class*="messageLine"] {
+  stroke: white !important;
+  stroke-width: 2px !important;
+}
+
+body.quarto-dark [id^="mermaid-"] line[stroke="none"] {
+  stroke: white !important;
+}
+
+body.quarto-dark .mermaid .edge-thickness-normal {
+  stroke: white !important;
+}
+
+body.quarto-dark .mermaid .edge-pattern-solid {
+  stroke: white !important;
+}
+
+body.quarto-dark .mermaid .marker {
+  fill: white !important;
+}
+
+body.quarto-dark .mermaid .edgePath path {
+  stroke: white !important;
+}
+
+body.quarto-dark .mermaid .flowchart-link {
+  stroke: white !important;
+}
+
+/* Text Elements - Message Text (white on dark) */
+body.quarto-dark div[id^="mermaid-"] .messageText {
+  fill: white !important;
+  color: white !important;
+}
+
+body.quarto-dark [id^="mermaid-"] text[class*="messageText"] {
+  fill: white !important;
+}
+
+body.quarto-dark [id^="mermaid-"] text[fill="#333"]:not(.noteText) {
+  fill: white !important;
+}
+
+/* Text Elements - Note Text (black on yellow background) */
+body.quarto-dark div[id^="mermaid-"] .noteText {
+  fill: black !important;
+  color: black !important;
+}
+
+body.quarto-dark [id^="mermaid-"] text[class*="noteText"] {
+  fill: black !important;
+}
+
+/* Node Elements */
+body.quarto-dark .mermaid .node rect,
+body.quarto-dark .mermaid .node circle,
+body.quarto-dark .mermaid .node ellipse,
+body.quarto-dark .mermaid .node polygon {
+  fill: #2a2a2a !important;
+  stroke: #555 !important;
+}
+
+body.quarto-dark .mermaid .nodeLabel {
+  color: #e0e0e0 !important;
+}
+
+/* Edge Labels */
+body.quarto-dark .mermaid .edgeLabel {
+  background-color: #2b2929 !important;
+  color: #e0e0e0 !important;
+}
+/* Flowchart specific rules */
+body.quarto-dark [id^="mermaid-"] .flowchart path {
+  stroke: white !important;
+}
+
+body.quarto-dark [id^="mermaid-"] .flowchart line {
+  stroke: white !important;
+}
+
+body.quarto-dark [id^="mermaid-"] path[fill="#000000"] {
+  fill: none !important;
+  stroke: white !important;
+}
+
+/* Target all paths in mermaid diagrams */
+body.quarto-dark [id^="mermaid-"] path {
+  stroke: white !important;
+}
+
+body.quarto-dark [id^="mermaid-"] path[stroke="none"] {
+  stroke: white !important;
+}
+
+/* Flowchart connector lines */
+body.quarto-dark [id^="mermaid-"] .edge {
+  stroke: white !important;
+}
+
+body.quarto-dark [id^="mermaid-"] .connector {
+  stroke: white !important;
+}
