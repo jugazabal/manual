@@ -41,6 +41,18 @@ format:
     margin-top: 20mm
     margin-bottom: 20mm
     include-in-header: preamble.tex
+    mermaid: 
+      theme: forest
+    fig-width: 8
+    fig-height: 6
+    fig-dpi: 300
+    geometry: 
+      - top=30mm
+      - bottom=20mm
+      - left=20mm
+      - right=20mm
+      - heightrounded
+      
 
 
   docx:
@@ -863,174 +875,8 @@ However, there is no need to include the headings. On the manual, this section l
 
 ¦ **Output:**
 
-:::: custom-snippet
-::: {.content-visible when-format="html"}
+![A1 item as seen on the UI](images/A1_html.png)
 
-<b>A1. Name</b>
-<br>
-
-<b>Definition</b>
-<p>Person's legal name.</p>
-
-<b>AA1 Name of Client</b><br>
-<b>Intent</b>
-<p class="indented">
-    To record the name of the client receiving services from the home
-    care agency.
-</p>
-<b>Definition</b>
-<p class="indented">
-    Client’s legal name, which represents the full name of the person.
-</p>
-
-<b>Coding</b>
-<p class="indented">
-    Use printed letters. Enter in the following order: <br>
-    <b>a. Last/Family Name,</b><br>
-    <b>b. First Name,</b><br>
-    <b>c. Middle Name/Initial.</b>
-</p>
-<p class="indented">If the client has no middle initial, leave item “c” blank.</p>
-
-:::
-
-    
-::: {.content-visible when-format="pdf"}
-
-
-\textbf{A1. Name}
-
-\textbf{Definition}
-\par\indent\hspace{3em}Person’s legal name.
-
-\textbf{AA1 Name of Client}
-
-\textbf{Intent}
-\par\indent\hspace{3em}To record the name of the client receiving services from the home care agency.
-
-\textbf{Definition}
-\par\indent\hspace{3em}Client’s legal name, which represents the full name of the person.
-
-\textbf{Coding}
-\par\indent\hspace{3em}Use printed letters. Enter in the following order:
-
-\par\indent\hspace{3em}\textbf{a. Last/Family Name,}
-\par\indent\hspace{3em}\textbf{b. First Name,}
-\par\indent\hspace{3em}\textbf{c. Middle Name/Initial.}
-
-\par\indent\hspace{3em}If the client has no middle initial, leave item “c” blank.
-
-
-:::
-
-::: {.content-visible when-format="docx"}
-```{=openxml}
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>A1. Name</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>Definition</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:t>Person’s legal name.</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>AA1 Name of Client</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>Intent</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:t>To record the name of the client receiving services from the home care agency.</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>Definition</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:t>Client’s legal name, which represents the full name of the person.</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>Coding</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:t>Use printed letters. Enter in the following order:</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>a. Last/Family Name,</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>b. First Name,</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>c. Middle Name/Initial.</w:t>
-  </w:r>
-</w:p>
-<w:p>
-  <w:pPr>
-    <w:ind w:left="1080"/>
-  </w:pPr>
-  <w:r>
-    <w:t>If the client has no middle initial, leave item “c” blank.</w:t>
-  </w:r>
-</w:p>
-```
-:::
-::::
 
 ### Spacing between paragraphs
 
@@ -1054,42 +900,8 @@ This is a text that only serves to demonstrate the space between the list and th
 
 ¦ **Output:**
 
-:::: custom-snippet
-::: {.content-visible when-format="html"}
+![End of list with `<div><br>` tag as seen on the UI](images/div_br_line.png)
 
-<p class="indented"><b>Coding</b><br>
-    <b>M. Male</b><br>
-    <b>F. Female</b><br>
-    <b>UN. Not assigned male or female</b>
-<br>
-This is a text that only serves to demonstrate the space between the list and the following lines.
-</p>
-
-:::
-::::
-
-::: {.content-visible when-format="pdf"}
-
-\textbf{Coding}
-\par\noindent\hspace{6em}\textbf{M.} Male
-\par\noindent\hspace{6em}\textbf{F.} Female
-\par\noindent\hspace{6em}\textbf{UN.} Not assigned male or female
-
-\par\noindent\hspace{3em}This is a text that serves to demonstrate the space between the list and the following lines.
-
-:::
-
-::: {.content-visible when-format="docx"}
-
-**Coding**
-
-> **M.** Male  
-> **F.** Female  
-> **UN.** Not assigned male or female
-
-This is a text that would serves to demonstrate the space between the list and the following lines.
-
-:::
 
 
 -   If a new paragraph begins after the end of a list with padding style `<div style="padding-left:3em;"></div>` there is no need to use a single `<br>` space after the end of the list `<ul></ul>` or `<ol></ol>` or after `</div>` if no text is placed between `</ol>` and `</div>` as the browser will automatically make a space, and putting a space here would make the separation too wide.
@@ -1119,122 +931,8 @@ This is a text that only serves to demonstrate the space between the list and th
 
 ¦ **Output:**
 
-:::: custom-snippet
-::: {.content-visible when-format="html"}
-<b>A4. Marital Status</b> <br><br> <b>Coding</b>
+![A4 item as seen on the UI](images/A4_html.png)
 
-::: {style="padding-left:3em;"}
-Choose the answer that describes the current marital status of the person. If the person is in a common-law relationship, score the item “<b>2</b>” for “Married”. If the person is in a same-sex relationship that is legally recognized as a marriage, score the item “<b>2</b>” for “Married”. If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, score the item “<b>3</b>” for “Partner/significant other”. <br>
-
-<ol>
-
-<li><b>Never married</b></li>
-
-<li><b>Married</b></li>
-
-<li><b>Partner/Significant other</b></li>
-
-<li><b>Widowed</b></li>
-
-<li><b>Separated</b></li>
-
-<li><b>Divorced</b></li>
-
-</ol>
-
-:::
-This is a text that only serves to demonstrate the space between the list and the following lines.
-:::
-
-::: {.content-visible when-format="pdf"}  
-\begin{adjustwidth}{3em}{0pt}
-Choose the answer that describes the current marital status of the person. 
-If the person is in a common-law relationship, score the item ``\textbf{2}'' for ``Married''. 
-If the person is in a same-sex relationship that is legally recognized as a marriage, 
-score the item ``\textbf{2}'' for ``Married''. 
-If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, 
-score the item ``\textbf{3}'' for ``Partner/significant other''.
-
-\vspace{0.5em}
-
-\begin{enumerate}
-    \item \textbf{Never married}
-    \item \textbf{Married}
-    \item \textbf{Partner/Significant other}
-    \item \textbf{Widowed}
-    \item \textbf{Separated}
-    \item \textbf{Divorced}
-\end{enumerate}
-\end{adjustwidth}
-
-This is a text that only serves to demonstrate the space between the list and the following lines.
-:::
-
-::: {.content-visible when-format="docx"}
-```{=openxml}
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>A4. Marital Status</w:t>
-  </w:r>
-</w:p>
-
-<w:p>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>Coding</w:t>
-  </w:r>
-</w:p>
-
-<w:p>
-  <w:pPr>
-    <w:ind w:left="864"/>
-  </w:pPr>
-  <w:r>
-    <w:t>Choose the answer that describes the current marital status of the person. If the person is in a common-law relationship, score the item “</w:t>
-  </w:r>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>2</w:t>
-  </w:r>
-  <w:r>
-    <w:t>” for “Married”. If the person is in a same-sex relationship that is legally recognized as a marriage, score the item “</w:t>
-  </w:r>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>2</w:t>
-  </w:r>
-  <w:r>
-    <w:t>” for “Married”. If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, score the item “</w:t>
-  </w:r>
-  <w:r>
-    <w:rPr><w:b/></w:rPr>
-    <w:t>3</w:t>
-  </w:r>
-  <w:r>
-    <w:t>” for “Partner/significant other”.</w:t>
-  </w:r>
-</w:p>
-```
-:::
-
-1. Never married
-2. Married
-3. Partner/Significant other
-4. Widowed
-5. Separated
-6. Divorced
-
-::: {.content-visible when-format="docx"}
-```{=openxml}
-<w:p>
-  <w:r>
-    <w:t>This is a text that only serves to demonstrate the space between the list and the following lines.</w:t>
-  </w:r>
-</w:p>
-```
-:::
-::::
 
 ### Ordered and unordered lists
 
@@ -1257,7 +955,7 @@ To document the reason for completing the assessment.
 <b>Coding</b>
 <div style="padding-left:3em;">
 Enter the number corresponding to the reason for assessment.
-<br>
+<br><br>
 
 <b>1. 	First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.
 <br><br>
@@ -1266,34 +964,16 @@ Enter the number corresponding to the reason for assessment.
 <br><br>
 
 </div>
+<br>
 ```
 
 ¦ **Output:**
 
-:::: custom-snippet
-<b>A8. Reason for Assessment</b> <br>
-
-<b>Intent</b>
-
-::: {style="padding-left:3em;"}
-To document the reason for completing the assessment.
-:::
 
 
+![Numbered list](images/numbered_list.png)
 
-<b>Coding</b>
 
-::: {style="padding-left:3em;"}
-Enter the number corresponding to the reason for assessment. <br>
-
-<b>1. First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services. <br>
-
-<b>2. Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current. <br>
-
-<b>3. Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence. <br>
-
-:::
-::::
 
 As seen on the example, the padded text after 'Coding' has the same indentation as the numbered paragraphs.
 
@@ -1324,44 +1004,12 @@ Enter the number corresponding to the reason for assessment.
   <li><b>Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence.</li><br>
 </ol>
 </div>
+<br>
 ```
 
 ¦ **Output:**
 
-:::: custom-snippet
-<b>A8. Reason for Assessment</b> <br>
-
-<b>Intent</b>
-
-::: {style="padding-left:3em;"}
-To document the reason for completing the assessment.
-:::
-
-
-
-<b>Coding</b>
-
-::: {style="padding-left:3em;"}
-Enter the number corresponding to the reason for assessment. <br>
-
-<ol>
-
-<li><b>First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.</li>
-
-
-
-<li><b>Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current.</li>
-
-
-
-<li><b>Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence.</li>
-
-</ol>
-
-<br><br>
-
-:::
-::::
+![Ordered list](images/ordered_list.png)
 
 Now the list appears nested under the padded text, with the text displaying three degrees of indentation.
 
@@ -1388,26 +1036,7 @@ An ordered list could be used when nested inside a section containing only the l
 
 ¦ **Output:**
 
-:::: custom-snippet
-<b>Coding</b>
-
-<ol>
-
-<li><b>First assessment</b> — An assessment that is done at the time of entry into the home care system, or when initially determining eligibility for home care/home health services.</li>
-
-
-
-<li><b>Routine reassessment</b> — A regularly scheduled follow-up assessment to ensure that the care plan is appropriate and current.</li>
-
-
-
-<li><b>Return assessment</b> — An assessment conducted when the person returns from the hospital or re-enters the home care system after a planned absence.</li>
-
-
-
-</ol>
-
-::::
+![Numbered single list](images/numbered_single_list.png)
 
 -   Use of spaces after items on a list or numbered paragraph
 
@@ -1441,25 +1070,13 @@ Choose the answer that describes the current marital status of the person. If th
 
 ¦ **Output:**
 
-:::: custom-snippet
-<b>A4. Marital Status</b> <br><br>
-
-<b>Coding</b>
-
-::: {style="padding-left:3em;"}
-Choose the answer that describes the current marital status of the person. If the person is in a common-law relationship, score the item “<b>2</b>” for “Married”. If the person is in a same-sex relationship that is legally recognized as a marriage, score the item “<b>2</b>” for “Married”. If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, score the item “<b>3</b>” for “Partner/significant other”. <br><br>
-
-<b>1. Never married</b><br> <b>2. Married</b><br> <b>3. Partner/Significant other</b><br> <b>4. Widowed</b><br> <b>5. Separated</b><br> <b>6. Divorced</b>
-
-:::
-::::
+![Short numbered paragraph](images/short_numbered_paragraph.png)
 
 -   The same short paragraph in list form
 
 ¦ **Code:**
 
 ``` html
-<div class="custom-snippet">
 <b>A4. Marital Status</b>
 <br><br>
 
@@ -1477,38 +1094,11 @@ Choose the answer that describes the current marital status of the person. If th
   <li><b>Divorced</b></li>
 </ol>
 </div>
-</div>
-<br>
 ```
 
 ¦ **Output:**
 
-:::: custom-snippet
-<b>A4. Marital Status</b> <br><br>
-
-<b>Coding</b>
-
-::: {style="padding-left:3em;"}
-Choose the answer that describes the current marital status of the person. If the person is in a common-law relationship, score the item “<b>2</b>” for “Married”. If the person is in a same-sex relationship that is legally recognized as a marriage, score the item “<b>2</b>” for “Married”. If the person is in a long-term same-sex relationship that is not legally recognized as a marriage, score the item “<b>3</b>” for “Partner/significant other”. <br><br>
-
-<ol>
-
-<li><b>Never married</b></li>
-
-<li><b>Married</b></li>
-
-<li><b>Partner/Significant other</b></li>
-
-<li><b>Widowed</b></li>
-
-<li><b>Separated</b></li>
-
-<li><b>Divorced</b></li>
-
-</ol>
-
-:::
-::::
+![Short ordered paragraph](images/short_ordered_paragraph.png)
 
 ### CAP manual
 
@@ -1587,17 +1177,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Output:
 
-:::: custom-snippet
-<b>Coding</b>
-
-::: {style="padding-left:3em;"}
-<b>0. Never</b><br> <b>1. More than 30 days ago</b><br> <b>2. 8 to 30 days ago</b><br> <b>3. 4 to 7 days ago</b><br> <b>4. In last 3 days</b><br> <b>8. Unable to determine</b>
-
-:::
-
-<br>
-
-::::
+![Short sentences list](/images/short_sentences_list.png)
 
 ¦Example of a list with long sentences:
 
@@ -1616,18 +1196,8 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 
 ¦Output:
 
-:::: custom-snippet
-<b>Coding</b>
+![Long sentences list](/images/long_sentences_list.png)
 
-::: {style="padding-left:3em;"}
-<b>0. No decline</b> — There was no change or there was an increase in the person’s level of participation in social activities. <br><br>
-
-<b>1. Decline, not distressed</b> — The person experienced a decline in his or her level of participation in social activities without a corresponding increase in his or her distress. <br><br>
-
-<b>2. Decline, distressed</b> — Both decline and distress are observed or reported.
-
-:::
-::::
 
 ### Availability of the interRAI instruments with CAP output in our main customer base
 
@@ -1662,9 +1232,9 @@ You can render LaTeX mathematical expressions using [KaTeX](https://khan.github.
 
 The *Gamma function* satisfying $\Gamma(n) = (n-1)!\quad\forall n\in\mathbb N$ is via the Euler integral
 
-$
+$$
 \Gamma(z) = \int_0^\infty t^{z-1}e^{-t}dt\,.
-$
+$$
 
 > You can find more information about **LaTeX** mathematical expressions [here](http://meta.math.stackexchange.com/questions/5020/mathjax-basic-tutorial-and-quick-reference).
 
@@ -1672,19 +1242,52 @@ $
 
 You can render UML diagrams using [Mermaid](https://mermaidjs.github.io/). For example, this will produce a sequence diagram:
 
+
+
+``` markdown
+sequenceDiagram
+Alice ->> Bob: Hello Bob, how are you?
+Bob-->>John: How about you John?
+Bob--x Alice: I am good thanks!
+Bob-x John: I am good thanks!
+Note right of John: John thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
+
+Bob-->Alice: Checking with John...
+Alice->John: Yes... John, how are you?
+```
+
+::: {.content-visible when-format="html"}
 ```{mermaid}
 sequenceDiagram
 Alice ->> Bob: Hello Bob, how are you?
 Bob-->>John: How about you John?
 Bob--x Alice: I am good thanks!
 Bob-x John: I am good thanks!
-Note right of John: Bob thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
+Note right of John: John thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
 
 Bob-->Alice: Checking with John...
 Alice->John: Yes... John, how are you?
 ```
 
+:::
+
+::: {.content-visible unless-format="html"}
+
+![](images/mermaid_diagram.png)
+
+:::
+
 And this will produce a flow chart:
+
+``` markdown
+sequenceDiagram
+graph LR
+A[Square Rect] -- Link text --> B((Circle))
+A --> C(Round Rect)
+B --> D{Rhombus}
+C --> D
+```
+
 
 ```{mermaid}
 graph LR
