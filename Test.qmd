@@ -7,7 +7,7 @@ author:
     affiliation: "Vitec Raisoft"
     email: "juan.garcia@vitecsoftware.com"
 date: "2025-06-30"
-date-modified: "2025-08-07"
+date-modified: today
 description: "A guide to standardize the look and feel of all interRAI manuals."
 lang: en
 mainfont: "Georgia"
@@ -36,10 +36,10 @@ format:
     pdf-engine: lualatex   # Or "prince" or "lualatex"
     toc: true
     number-sections: true
-    margin-left: 25mm
-    margin-right: 25mm
-    margin-top: 20mm
-    margin-bottom: 20mm
+    margin-left: 254mm
+    margin-right: 254mm
+    margin-top: 254mm
+    margin-bottom: 254mm
     include-in-header: preamble.tex
     mermaid: 
       theme: forest
@@ -52,6 +52,7 @@ format:
       - left=20mm
       - right=20mm
       - heightrounded
+    mainfont: "Times New Roman"
       
 
 
@@ -837,6 +838,8 @@ So, for example, this section of the manual on the source document appears like 
 
 ![Section A1](images/A1.png)
 
+{{< pagebreak >}}
+
 However, there is no need to include the headings. On the manual, this section looks like this:
 
 ¦ **Code:**
@@ -872,6 +875,7 @@ However, there is no need to include the headings. On the manual, this section l
     If the client has no middle initial, leave item “c” blank.
 </div>
 ```
+{{< pagebreak >}}
 
 ¦ **Output:**
 
@@ -967,6 +971,7 @@ Enter the number corresponding to the reason for assessment.
 <br>
 ```
 
+
 ¦ **Output:**
 
 
@@ -1006,6 +1011,7 @@ Enter the number corresponding to the reason for assessment.
 </div>
 <br>
 ```
+\pagebreak
 
 ¦ **Output:**
 
@@ -1067,6 +1073,7 @@ Choose the answer that describes the current marital status of the person. If th
 </div>
 <br>
 ```
+{{< pagebreak >}}
 
 ¦ **Output:**
 
@@ -1214,7 +1221,7 @@ When transcribing ordered lists, it is recommended not to use the `<ol></ol>` fo
 | Community Mental Health (CMH) | YES | YES | YES |
 | Children & Youth MH + Developmental Disabilities | YES | NO | YES |
 
-######################################################################################################################################################################################################################################################################################################################################################### 
+##################################################################################################################################################################################################################################################################################################################################################################### 
 
 ## SmartyPants
 
@@ -1277,6 +1284,7 @@ Alice->John: Yes... John, how are you?
 
 :::
 
+\pagebreak
 And this will produce a flow chart:
 
 ``` markdown
@@ -1296,6 +1304,8 @@ A --> C(Round Rect)
 B --> D{Rhombus}
 C --> D
 ```
+
+
 
 ::: callout-note
 Note that there are five types of callouts, including: note, tip, warning, caution, and important.
@@ -1324,3 +1334,4 @@ This is a default callout with no type specified.
 
 This is an example of a 'folded' caution callout that can be expanded by the user. You can use `collapse="true"` to collapse it by default or `collapse="false"` to make a collapsible callout that is expanded by default.
 :::
+
