@@ -23,7 +23,7 @@ format:
     toc: true
     toc-depth: 3
     number-sections: true
-    self-contained: false
+    self-contained: true
     code-tools: true
     code-copy: hover
     embed-resources: true
@@ -60,7 +60,8 @@ format:
     toc: true
     number-sections: true
     reference-doc: reference.docx
-   
+  
+ 
 editor: visual
 
 ---

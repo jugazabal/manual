@@ -125,12 +125,24 @@ body.quarto-dark {
 
 /* Logo on banner - TOP LEFT */
 div.quarto-title-banner.page-columns.page-full {
-  background-image: url('Vitec_Raisoft_Original.png');
+   background-color: #171B3E; 
+  background-image: url('Vitec_Raisoft_Original.jpg');
   background-repeat: no-repeat;
   background-position: 20px 15px;
   background-size: auto 50px;
   min-height: 120px; /* Make banner taller */
 }
+
+/* Banner title text */
+.quarto-title-banner .title {
+  color: #e6d7d7; /* dark grey */
+}
+
+/* Banner description text */
+.quarto-title-banner .description {
+  color: #ffffff; /* white */
+}
+
 
 /* Push the entire title section down */
 .quarto-title-banner .quarto-title.column-body {
