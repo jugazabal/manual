@@ -1,20 +1,11 @@
 (() => {
   'use strict';
 
-  // ---------- State ----------
-  let rows = [];
-  let rowIdCounter = 0;
-  let currentImageFile = null;
-
-  const rowsContainer = document.getElementById('rows');
-  const emptyRowsHint = document.getElementById('emptyRowsHint');
-  const rowTemplate = document.getElementById('row-template');
-
-  // ---------- Utilities ----------
-  function nextId() {
-    rowIdCounter += 1;
-    return 'row-' + rowIdCounter;
-  }
+  // ========================================================================
+  // Text cleanup utilities — strip OCR/paste artifacts (control chars, zero-
+  // width chars, non-breaking spaces, ligatures, doubled spaces) so nothing
+  // stray leaks into the generated HTML.
+  // ========================================================================
 
   function escapeHtml(str) {
     return str
@@ -51,379 +42,224 @@
     return stripControlChars(out);
   }
 
-  // The manual style deliberately pads numbered list items with three spaces,
-  // e.g. "1.   Married". Since OCR/typed spacing can't be trusted to preserve
-  // that, enforce it explicitly instead of trying to detect "intentional" runs.
-  function normalizeListNumber(text) {
-    return text.replace(/^(\d{1,3}\.)\s*/, '$1   ');
-  }
-
   // Full clean for a standalone line/value: same as cleanFragment plus trim.
   function cleanText(str) {
     return cleanFragment(str).trim();
   }
 
-  // Restrict contenteditable output to b/i/u/text only, and clean stray
-  // whitespace/control characters out of the text content.
-  function sanitizeInline(html) {
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    const tagMap = { strong: 'b', b: 'b', em: 'i', i: 'i', u: 'u' };
-
-    function walk(node) {
-      const children = Array.from(node.childNodes);
-      children.forEach((child) => {
-        if (child.nodeType === Node.TEXT_NODE) {
-          child.textContent = cleanFragment(child.textContent);
-          return;
-        }
-        if (child.nodeType !== Node.ELEMENT_NODE) {
-          child.remove();
-          return;
-        }
-        const tag = child.tagName.toLowerCase();
-        if (tagMap[tag]) {
-          walk(child);
-          if (tag !== tagMap[tag]) {
-            const replacement = document.createElement(tagMap[tag]);
-            replacement.innerHTML = child.innerHTML;
-            child.replaceWith(replacement);
-          }
-        } else if (tag === 'br') {
-          child.replaceWith(document.createTextNode(' '));
-        } else if (tag === 'div' || tag === 'p') {
-          walk(child);
-          const frag = document.createDocumentFragment();
-          Array.from(child.childNodes).forEach((n) => frag.appendChild(n));
-          frag.appendChild(document.createTextNode(' '));
-          child.replaceWith(frag);
-        } else {
-          walk(child);
-          const frag = document.createDocumentFragment();
-          Array.from(child.childNodes).forEach((n) => frag.appendChild(n));
-          child.replaceWith(frag);
-        }
-      });
-    }
-    walk(container);
-    return container.innerHTML.replace(/\s+/g, ' ').trim();
+  // The manual style deliberately pads numbered list items with three spaces,
+  // e.g. "1.   Married". Enforced explicitly rather than trying to detect
+  // "intentional" runs.
+  function normalizeListNumber(text) {
+    return text.replace(/^(\d{1,3}\.)\s*/, '$1   ');
   }
 
-  function defaultRow(type) {
-    const last = rows[rows.length - 1];
-    const inheritIndent = last ? (last.type === 'section' || ((last.type === 'text' || last.type === 'list') && last.indent)) : false;
-    const base = {
-      id: nextId(),
-      type,
-      text: '',
-      html: '',
-      heading: false,
-      indent: inheritIndent && type !== 'title' && type !== 'section',
-      listStyle: 'paragraph', // paragraph | ol | ul
-      spacing: 'single',
-    };
-    if (type === 'title') { base.spacing = 'double'; base.indent = false; }
-    if (type === 'section') { base.spacing = 'none'; base.indent = false; }
-    if (type === 'spacer') { base.spacing = 'double'; }
-    return base;
+  // ========================================================================
+  // Automatic layout-based conversion.
+  //
+  // interRAI manuals are laid out as a strict two-column definition list:
+  // a short bold label on the left ("Intent", "Definition", "Coding", or an
+  // item code like "A1.") and its content indented in a column further
+  // right. That's a purely geometric, font-independent signal we can read
+  // straight from OCR word bounding boxes (Tesseract's bold/italic/font
+  // detection is unreliable and returns empty on real screenshots, so we
+  // don't rely on it at all). This lets us infer bold labels, indentation,
+  // and section boundaries automatically instead of asking the user to tag
+  // every line by hand.
+  // ========================================================================
+
+  const SECTION_KEYWORDS = [
+    'intent', 'definition', 'definitions', 'process', 'coding', 'discussion',
+    'interview', 'rationale', 'note', 'notes', 'examples', 'example',
+    'observation', 'record review', 'time frame', 'response',
+  ];
+  const H3_SECTION_KEYWORDS = ['problem', 'triggers', 'guidelines', 'additional resources'];
+
+  function median(nums) {
+    const s = [...nums].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
   }
 
-  // ---------- Row rendering ----------
-  function addRow(type, presetText) {
-    const row = defaultRow(type);
-    if (presetText !== undefined) {
-      row.text = presetText;
-      row.html = escapeHtml(presetText);
-    }
-    rows.push(row);
-    renderRows();
-    return row;
+  // Common OCR confusion: lowercase "l" read instead of digit "1" in item codes.
+  function fixItemCode(text) {
+    return text.replace(/^([A-Z]{1,3})l([a-z]{0,2}\.?)$/, '$1' + '1' + '$2');
   }
 
-  function removeRow(id) {
-    rows = rows.filter((r) => r.id !== id);
-    renderRows();
+  function looksLikeItemCode(label) {
+    const fixed = fixItemCode(label.trim());
+    return /^[A-Z]{1,3}\d{1,3}[a-z]{0,2}\.?$/.test(fixed);
   }
 
-  function moveRow(id, dir) {
-    const idx = rows.findIndex((r) => r.id === id);
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= rows.length) return;
-    const [r] = rows.splice(idx, 1);
-    rows.splice(newIdx, 0, r);
-    renderRows();
+  function sectionKeywordInfo(label) {
+    const norm = label.trim().toLowerCase().replace(/[:.]$/, '');
+    if (H3_SECTION_KEYWORDS.includes(norm)) return { matched: true, heading: true };
+    if (SECTION_KEYWORDS.includes(norm)) return { matched: true, heading: false };
+    return { matched: false, heading: false };
   }
 
-  function renderRows() {
-    emptyRowsHint.classList.toggle('hidden', rows.length > 0);
-    rowsContainer.innerHTML = '';
-    rows.forEach((row) => {
-      rowsContainer.appendChild(buildRowCard(row));
-    });
+  function looksLikeListMarker(text) {
+    const m = text.match(/^([A-Za-z]{1,3}\d{0,3}[a-z]{0,2}[.)]|\d{1,3}[.)])\s+(.*)$/);
+    if (!m) return null;
+    const closer = m[1].endsWith(')') ? ')' : '.';
+    return { marker: normalizeListNumber(fixItemCode(m[1].replace(/[.)]$/, '')) + closer), rest: m[2] };
   }
 
-  function buildSpacingSelect(row) {
-    const sel = document.createElement('select');
-    [['none', 'No space'], ['single', 'Single <br>'], ['double', 'Double <br><br>']].forEach(([val, label]) => {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = label;
-      if (row.spacing === val) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.addEventListener('change', () => { row.spacing = sel.value; });
-    return sel;
-  }
-
-  function buildIndentToggle(row) {
-    const label = document.createElement('label');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = row.indent;
-    cb.addEventListener('change', () => {
-      row.indent = cb.checked;
-      renderRows();
-    });
-    label.appendChild(cb);
-    label.appendChild(document.createTextNode('Indented'));
-    return label;
-  }
-
-  function buildMiniToolbar(target) {
-    const bar = document.createElement('div');
-    bar.className = 'mini-toolbar';
-    [['bold', 'B'], ['italic', 'I'], ['underline', 'U']].forEach(([cmd, label]) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = label;
-      btn.dataset.cmd = cmd;
-      btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep selection
-      btn.addEventListener('click', () => {
-        target.focus();
-        document.execCommand(cmd, false, null);
-      });
-      bar.appendChild(btn);
-    });
-    return bar;
-  }
-
-  function buildEditableLine(row, onInput) {
-    const div = document.createElement('div');
-    div.className = 'editable-line';
-    div.contentEditable = 'true';
-    div.innerHTML = row.html || escapeHtml(row.text || '');
-    div.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') e.preventDefault(); // single-line field
-    });
-    div.addEventListener('input', () => {
-      row.html = sanitizeInline(div.innerHTML);
-      row.text = div.textContent;
-      if (onInput) onInput();
-    });
-    div.addEventListener('blur', () => {
-      row.html = sanitizeInline(div.innerHTML);
-      row.text = div.textContent;
-    });
-    return div;
-  }
-
-  function buildRowCard(row) {
-    const card = rowTemplate.content.firstElementChild.cloneNode(true);
-    card.dataset.id = row.id;
-    card.dataset.indent = String(row.indent);
-
-    const badge = card.querySelector('.row-type-badge');
-    badge.textContent = row.type;
-    badge.classList.add(row.type);
-
-    const controls = card.querySelector('.row-controls');
-    const body = card.querySelector('.row-body');
-
-    if (row.type !== 'title' && row.type !== 'section' && row.type !== 'spacer') {
-      controls.appendChild(buildIndentToggle(row));
-    }
-    if (row.type !== 'spacer') {
-      controls.appendChild(document.createTextNode(' '));
-      const spacingLabel = document.createElement('label');
-      spacingLabel.textContent = 'Space after: ';
-      spacingLabel.appendChild(buildSpacingSelect(row));
-      controls.appendChild(spacingLabel);
-    }
-
-    if (row.type === 'section') {
-      const headingLabel = document.createElement('label');
-      const headingCb = document.createElement('input');
-      headingCb.type = 'checkbox';
-      headingCb.checked = row.heading;
-      headingCb.addEventListener('change', () => { row.heading = headingCb.checked; });
-      headingLabel.appendChild(headingCb);
-      headingLabel.appendChild(document.createTextNode('Use <h3> (CAP-style major section)'));
-      controls.appendChild(headingLabel);
-    }
-
-    if (row.type === 'list') {
-      const styleLabel = document.createElement('label');
-      const sel = document.createElement('select');
-      [['paragraph', 'Numbered paragraph (recommended)'], ['ol', 'Ordered <ol> item'], ['ul', 'Bullet <ul> item']].forEach(([val, txt]) => {
-        const opt = document.createElement('option');
-        opt.value = val; opt.textContent = txt;
-        if (row.listStyle === val) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      sel.addEventListener('change', () => { row.listStyle = sel.value; });
-      styleLabel.appendChild(sel);
-      controls.appendChild(styleLabel);
-    }
-
-    // Body content per type
-    if (row.type === 'title' || row.type === 'section') {
-      const input = document.createElement('input');
-      input.className = 'plain-input';
-      input.type = 'text';
-      input.value = row.text || '';
-      input.placeholder = row.type === 'title' ? 'e.g. A1. Name' : 'e.g. Intent / Definition / Process / Coding';
-      input.addEventListener('input', () => { row.text = input.value; });
-      body.appendChild(input);
-    } else if (row.type === 'spacer') {
-      const note = document.createElement('div');
-      note.className = 'hint';
-      note.textContent = 'Forces a paragraph break (no text).';
-      body.appendChild(note);
-    } else {
-      // text or list
-      const editable = buildEditableLine(row);
-      body.appendChild(buildMiniToolbar(editable));
-      body.appendChild(editable);
-
-      if (row.type === 'list') {
-        const extra = document.createElement('div');
-        extra.className = 'list-extra';
-        const autoBtn = document.createElement('button');
-        autoBtn.type = 'button';
-        autoBtn.textContent = 'Auto-bold before dash';
-        autoBtn.title = 'Bolds the text before the first " — " (or "-") and leaves the rest plain, e.g. "1.   Married" bold + " — description" plain.';
-        autoBtn.addEventListener('click', () => {
-          const text = normalizeListNumber(cleanText(row.text || ''));
-          const dashMatch = text.match(/\s[—–-]\s/);
-          if (dashMatch) {
-            const idx = dashMatch.index;
-            const before = text.slice(0, idx).trim();
-            const after = cleanText(text.slice(idx + dashMatch[0].length));
-            row.html = `<b>${escapeHtml(before)}</b> — ${escapeHtml(after)}`;
-          } else {
-            row.html = `<b>${escapeHtml(text)}</b>`;
-          }
-          renderRows();
+  function flattenLines(blocks) {
+    const lines = [];
+    (blocks || []).forEach((block) => {
+      (block.paragraphs || []).forEach((para) => {
+        (para.lines || []).forEach((line) => {
+          const words = (line.words || [])
+            .map((w) => ({ text: cleanFragment(w.text || ''), bbox: w.bbox }))
+            .filter((w) => w.text);
+          if (words.length) lines.push({ bbox: line.bbox, words });
         });
-        extra.appendChild(autoBtn);
-        extra.appendChild(document.createTextNode('Long item (auto <br><br>): '));
-        const longCb = document.createElement('input');
-        longCb.type = 'checkbox';
-        longCb.checked = (row.text || '').length > 90;
-        longCb.addEventListener('change', () => { row.spacing = longCb.checked ? 'double' : 'single'; });
-        extra.appendChild(longCb);
-        body.appendChild(extra);
-      }
-    }
-
-    card.querySelector('.move-up').addEventListener('click', () => moveRow(row.id, -1));
-    card.querySelector('.move-down').addEventListener('click', () => moveRow(row.id, 1));
-    card.querySelector('.delete-row').addEventListener('click', () => removeRow(row.id));
-
-    return card;
+      });
+    });
+    lines.sort((a, b) => a.bbox.y0 - b.bbox.y0);
+    return lines;
   }
 
-  // ---------- HTML generation ----------
-  function spacingBr(spacing) {
-    if (spacing === 'double') return '<br><br>';
-    if (spacing === 'single') return '<br>';
-    return '';
-  }
-
-  function renderRowContent(row) {
-    switch (row.type) {
-      case 'title':
-        return `<b>${escapeHtml(cleanText(row.text || ''))}</b>`;
-      case 'section': {
-        const label = escapeHtml(cleanText(row.text || ''));
-        return row.heading ? `<h3>${label}</h3>` : `<b>${label}</b>`;
-      }
-      case 'text':
-        return row.html || '';
-      case 'list':
-        return row.html || '';
-      case 'spacer':
-        return '';
-      default:
-        return '';
-    }
-  }
-
-  function renderCluster(clusterRows) {
-    const parts = [];
-    let k = 0;
-    while (k < clusterRows.length) {
-      const r = clusterRows[k];
-      if (r.type === 'list' && r.listStyle !== 'paragraph') {
-        const style = r.listStyle;
-        const group = [];
-        while (k < clusterRows.length && clusterRows[k].type === 'list' && clusterRows[k].listStyle === style) {
-          group.push(clusterRows[k]);
-          k += 1;
-        }
-        const items = group.map((g) => `  <li>${g.html || ''}</li>`).join('\n');
-        parts.push(`<${style}>\n${items}\n</${style}>`);
-        const lastSpacing = group[group.length - 1].spacing;
-        const br = spacingBr(lastSpacing);
-        if (br) parts.push(br);
+  function mergeParagraphs(contentEvents, medianLineH) {
+    const paras = [];
+    let current = null;
+    let prevY1 = null;
+    contentEvents.forEach((ev) => {
+      const gap = prevY1 == null ? Infinity : ev.y0 - prevY1;
+      const isListStart = !!looksLikeListMarker(ev.text);
+      if (current && gap < 0.6 * medianLineH && !isListStart) {
+        current.text = cleanText(current.text + ' ' + ev.text);
       } else {
-        const content = renderRowContent(r);
-        parts.push(content + spacingBr(r.spacing));
-        k += 1;
+        current = { text: ev.text };
+        paras.push(current);
       }
-    }
-    return parts.join('\n');
+      prevY1 = ev.y1;
+    });
+    return paras;
   }
 
-  function generateHtml() {
+  function renderParagraph(p) {
+    const listInfo = looksLikeListMarker(p.text);
+    if (listInfo) {
+      const dashMatch = listInfo.rest.match(/\s[—–-]\s/);
+      if (dashMatch) {
+        const idx = dashMatch.index;
+        const before = cleanText(listInfo.rest.slice(0, idx));
+        const after = cleanText(listInfo.rest.slice(idx + dashMatch[0].length));
+        return `<b>${escapeHtml(listInfo.marker)} ${escapeHtml(before)}</b> — ${escapeHtml(after)}`;
+      }
+      return `<b>${escapeHtml(listInfo.marker)} ${escapeHtml(cleanText(listInfo.rest))}</b>`;
+    }
+    return escapeHtml(cleanText(p.text));
+  }
+
+  function renderParagraphGroup(paras) {
+    return paras.map((p, pi) => {
+      if (pi === paras.length - 1) return renderParagraph(p);
+      const next = paras[pi + 1];
+      const bothListItems = !!looksLikeListMarker(p.text) && !!looksLikeListMarker(next.text);
+      const br = bothListItems ? (p.text.length > 90 ? '<br><br>' : '<br>') : '<br><br>';
+      return renderParagraph(p) + br;
+    }).join('\n');
+  }
+
+  function convertBlocksToHtml(blocks) {
+    const lines = flattenLines(blocks);
+    if (!lines.length) return '';
+
+    const leftMargin = Math.min(...lines.map((l) => l.words[0].bbox.x0));
+    const medianLineH = median(lines.map((l) => l.bbox.y1 - l.bbox.y0));
+    const gapThreshold = Math.max(2.2 * medianLineH, 40);
+    const marginTolerance = Math.max(1.5 * medianLineH, 25);
+
+    // Split a line into an optional {label, contentWords} based on the widest
+    // word-to-word horizontal gap, if that gap is wide enough to be a column
+    // break AND the line starts near the page's left margin AND the label
+    // text matches a known section keyword or an item-code pattern (this
+    // last check is what keeps running page headers/footers from being
+    // mistaken for a label — their "label" text doesn't match either).
+    function splitLine(line) {
+      const words = line.words;
+      const startsAtMargin = Math.abs(words[0].bbox.x0 - leftMargin) <= marginTolerance;
+      if (!startsAtMargin || words.length < 2) return { label: null, words };
+
+      let bestGap = -1;
+      let bestIdx = -1;
+      for (let i = 0; i < words.length - 1; i += 1) {
+        const gap = words[i + 1].bbox.x0 - words[i].bbox.x1;
+        if (gap > bestGap) { bestGap = gap; bestIdx = i; }
+      }
+      if (bestGap < gapThreshold) return { label: null, words };
+
+      const labelWords = words.slice(0, bestIdx + 1);
+      const contentWords = words.slice(bestIdx + 1);
+      const labelText = cleanText(labelWords.map((w) => w.text).join(' '));
+      if (!(sectionKeywordInfo(labelText).matched || looksLikeItemCode(labelText))) {
+        return { label: null, words };
+      }
+      return { label: labelText, words: contentWords };
+    }
+
+    const events = [];
+    lines.forEach((line) => {
+      const { label, words } = splitLine(line);
+      const text = cleanText(words.map((w) => w.text).join(' '));
+      if (label) events.push({ type: 'label', label, text, y0: line.bbox.y0, y1: line.bbox.y1 });
+      else if (text) events.push({ type: 'content', text, y0: line.bbox.y0, y1: line.bbox.y1 });
+    });
+
     const out = [];
     let i = 0;
-    while (i < rows.length) {
-      const row = rows[i];
-      if (row.indent) {
-        let j = i;
-        const cluster = [];
-        while (j < rows.length && rows[j].indent) {
-          cluster.push(rows[j]);
-          j += 1;
-        }
-        const inner = renderCluster(cluster);
-        out.push(`<div style="padding-left:3em;">\n${inner}\n</div>`);
-        const lastSpacing = cluster[cluster.length - 1].spacing;
-        const hasMore = j < rows.length;
-        if (hasMore) {
-          const br = spacingBr(lastSpacing === 'none' ? 'single' : lastSpacing);
-          if (br) out.push(br);
-        }
+    let sawTitle = false;
+    while (i < events.length) {
+      const ev = events[i];
+      if (ev.type === 'content') {
+        const group = [ev];
+        let j = i + 1;
+        while (j < events.length && events[j].type === 'content') { group.push(events[j]); j += 1; }
+        out.push(renderParagraphGroup(mergeParagraphs(group, medianLineH)));
         i = j;
-      } else {
-        const content = renderRowContent(row);
-        out.push(content + spacingBr(row.spacing));
-        i += 1;
+        continue;
       }
+      if (!sawTitle && looksLikeItemCode(ev.label)) {
+        out.push(`<b>${escapeHtml(fixItemCode(ev.label))}${ev.text ? ' ' + escapeHtml(ev.text) : ''}</b><br><br>`);
+        sawTitle = true;
+        i += 1;
+        continue;
+      }
+      const contentEvents = [];
+      if (ev.text) contentEvents.push({ text: ev.text, y0: ev.y0, y1: ev.y1 });
+      let j = i + 1;
+      while (j < events.length && events[j].type === 'content') { contentEvents.push(events[j]); j += 1; }
+      const paras = mergeParagraphs(contentEvents, medianLineH);
+      const info = sectionKeywordInfo(ev.label);
+      const labelHtml = info.heading ? `<h3>${escapeHtml(ev.label)}</h3>` : `<b>${escapeHtml(ev.label)}</b>`;
+      const inner = renderParagraphGroup(paras);
+      out.push(`${labelHtml}\n<div style="padding-left:3em;">\n${inner}\n</div>`);
+      if (j < events.length) out.push('<br>');
+      i = j;
     }
     return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
   }
 
-  // ---------- Image input ----------
+  // ========================================================================
+  // Image input (drag/drop, file picker, clipboard paste)
+  // ========================================================================
+
+  let currentImageFile = null;
+
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const imagePreviewWrap = document.getElementById('imagePreviewWrap');
   const imagePreview = document.getElementById('imagePreview');
-  const runOcrBtn = document.getElementById('runOcrBtn');
+  const convertBtn = document.getElementById('convertBtn');
   const clearImageBtn = document.getElementById('clearImageBtn');
+  const appendToggle = document.getElementById('appendToggle');
   const ocrStatus = document.getElementById('ocrStatus');
   const ocrProgress = document.getElementById('ocrProgress');
+  const rawTextDetails = document.getElementById('rawTextDetails');
+  const rawTextOutput = document.getElementById('rawTextOutput');
 
   function setImage(file) {
     currentImageFile = file;
@@ -431,6 +267,7 @@
     imagePreview.src = url;
     imagePreviewWrap.classList.remove('hidden');
     ocrStatus.textContent = '';
+    rawTextDetails.classList.add('hidden');
   }
 
   dropzone.addEventListener('click', () => fileInput.click());
@@ -474,9 +311,22 @@
     fileInput.value = '';
   });
 
-  runOcrBtn.addEventListener('click', async () => {
+  // ========================================================================
+  // Convert pipeline: OCR (with word/line bounding boxes) -> automatic layout
+  // conversion -> HTML output. No per-line tagging step.
+  // ========================================================================
+
+  const htmlOutput = document.getElementById('htmlOutput');
+  const htmlPreview = document.getElementById('htmlPreview');
+  const copyStatus = document.getElementById('copyStatus');
+
+  function refreshPreview() {
+    htmlPreview.innerHTML = htmlOutput.value;
+  }
+
+  convertBtn.addEventListener('click', async () => {
     if (!currentImageFile) return;
-    runOcrBtn.disabled = true;
+    convertBtn.disabled = true;
     ocrProgress.classList.remove('hidden');
     ocrProgress.value = 0;
     ocrStatus.textContent = 'Loading OCR engine...';
@@ -487,45 +337,37 @@
           if (typeof m.progress === 'number') ocrProgress.value = m.progress;
         },
       });
-      const { data } = await worker.recognize(currentImageFile);
+      const { data } = await worker.recognize(currentImageFile, {}, { blocks: true });
       await worker.terminate();
-      const lines = data.text
-        .split('\n')
-        .map((l) => cleanText(l))
-        .filter((l) => l.length > 0);
-      lines.forEach((line) => addRow('text', line));
-      ocrStatus.textContent = `Done — added ${lines.length} line(s) to the builder below.`;
+
+      rawTextOutput.textContent = data.text;
+      rawTextDetails.classList.remove('hidden');
+
+      const html = convertBlocksToHtml(data.blocks);
+      if (appendToggle.checked && htmlOutput.value.trim()) {
+        htmlOutput.value = htmlOutput.value.trim() + '\n\n' + html;
+      } else {
+        htmlOutput.value = html;
+      }
+      refreshPreview();
+      ocrStatus.textContent = html ? 'Converted — review the HTML below.' : 'No text detected in this image.';
     } catch (err) {
       console.error(err);
-      ocrStatus.textContent = 'OCR failed: ' + err.message;
+      ocrStatus.textContent = 'Conversion failed: ' + err.message;
     } finally {
-      runOcrBtn.disabled = false;
+      convertBtn.disabled = false;
       ocrProgress.classList.add('hidden');
     }
   });
 
-  // ---------- Toolbar / output wiring ----------
-  document.querySelectorAll('.toolbar [data-add]').forEach((btn) => {
-    btn.addEventListener('click', () => addRow(btn.dataset.add));
-  });
+  htmlOutput.addEventListener('input', refreshPreview);
 
-  document.getElementById('clearRowsBtn').addEventListener('click', () => {
-    if (rows.length === 0) return;
-    if (confirm('Remove all rows from the builder?')) {
-      rows = [];
-      renderRows();
+  document.getElementById('clearOutputBtn').addEventListener('click', () => {
+    if (!htmlOutput.value) return;
+    if (confirm('Clear the generated HTML?')) {
+      htmlOutput.value = '';
+      refreshPreview();
     }
-  });
-
-  const htmlOutput = document.getElementById('htmlOutput');
-  const htmlPreview = document.getElementById('htmlPreview');
-  const copyStatus = document.getElementById('copyStatus');
-
-  document.getElementById('generateBtn').addEventListener('click', () => {
-    const html = generateHtml();
-    htmlOutput.value = html;
-    htmlPreview.innerHTML = html;
-    copyStatus.textContent = '';
   });
 
   document.getElementById('copyBtn').addEventListener('click', async () => {
@@ -540,7 +382,4 @@
     }
     setTimeout(() => { copyStatus.textContent = ''; }, 2000);
   });
-
-  // Initial render
-  renderRows();
 })();

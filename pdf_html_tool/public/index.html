@@ -9,7 +9,7 @@
 <body>
 <header>
   <h1>Screenshot → Manual Editor HTML</h1>
-  <p class="subtitle">OCR a manual screenshot, then tag each line to produce HTML that follows the interRAI Manual Editor conventions.</p>
+  <p class="subtitle">Drop in a manual screenshot — bold labels, indentation, and spacing are detected automatically from the page layout. Fix anything by editing the HTML text directly.</p>
 </header>
 
 <main>
@@ -23,43 +23,36 @@
     <div id="imagePreviewWrap" class="hidden">
       <img id="imagePreview" alt="Screenshot preview">
       <div class="row">
-        <button id="runOcrBtn" class="primary">Run OCR</button>
+        <button id="convertBtn" class="primary">Convert to HTML</button>
         <button id="clearImageBtn" class="secondary">Remove image</button>
+      </div>
+      <div class="row">
+        <label class="append-toggle"><input type="checkbox" id="appendToggle"> Append to existing output below (for multi-screenshot items)</label>
+      </div>
+      <div class="row">
         <span id="ocrStatus" class="status"></span>
       </div>
       <progress id="ocrProgress" value="0" max="1" class="hidden"></progress>
+      <details id="rawTextDetails" class="hidden">
+        <summary>Raw OCR text (for troubleshooting)</summary>
+        <pre id="rawTextOutput"></pre>
+      </details>
     </div>
   </section>
 
-  <!-- STEP 2: Builder -->
-  <section class="panel" id="panel-builder">
-    <h2>2. Tag the extracted text</h2>
-    <p class="hint">OCR results are added as plain-text rows below. Set each row's <em>type</em>, whether it's <em>indented</em> (inside a padded block), and the <em>spacing</em> that follows it. Use the B / I / U buttons to bold/italicize/underline selected text inside a row.</p>
-    <div class="toolbar">
-      <button data-add="title">+ Title</button>
-      <button data-add="section">+ Section header</button>
-      <button data-add="text">+ Text line</button>
-      <button data-add="list">+ List item</button>
-      <button data-add="spacer">+ Spacer</button>
-      <span class="spacer-fill"></span>
-      <button id="clearRowsBtn" class="danger">Clear all rows</button>
-    </div>
-    <div id="rows"></div>
-    <p id="emptyRowsHint" class="hint">No rows yet — run OCR above, or add rows manually.</p>
-  </section>
-
-  <!-- STEP 3: Output -->
+  <!-- STEP 2: Output -->
   <section class="panel" id="panel-output">
-    <h2>3. Generated HTML</h2>
+    <h2>2. Generated HTML</h2>
+    <p class="hint">Title, section labels (Intent / Definition / Coding / …), padded indentation, numbered-item bolding, and line spacing are inferred automatically from the screenshot's two-column layout. Anything OCR got wrong (page headers, misread characters, missed inline bold) can be fixed by editing the text on the left directly — it's plain HTML.</p>
     <div class="row">
-      <button id="generateBtn" class="primary">Generate HTML</button>
       <button id="copyBtn" class="secondary">Copy to clipboard</button>
+      <button id="clearOutputBtn" class="danger">Clear output</button>
       <span id="copyStatus" class="status"></span>
     </div>
     <div class="output-grid">
       <div>
-        <h3>HTML source</h3>
-        <textarea id="htmlOutput" spellcheck="false" placeholder="Generated HTML will appear here..."></textarea>
+        <h3>HTML source (editable)</h3>
+        <textarea id="htmlOutput" spellcheck="false" placeholder="Converted HTML will appear here after you convert a screenshot..."></textarea>
       </div>
       <div>
         <h3>Preview</h3>
@@ -69,22 +62,7 @@
   </section>
 </main>
 
-<template id="row-template">
-  <div class="row-card" data-id="">
-    <div class="row-head">
-      <span class="row-type-badge"></span>
-      <div class="row-controls"></div>
-      <div class="row-move">
-        <button class="icon-btn move-up" title="Move up">↑</button>
-        <button class="icon-btn move-down" title="Move down">↓</button>
-        <button class="icon-btn delete-row" title="Delete row">✕</button>
-      </div>
-    </div>
-    <div class="row-body"></div>
-  </div>
-</template>
-
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
