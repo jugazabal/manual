@@ -112,6 +112,10 @@
 
   function sectionKeywordInfo(label) {
     const norm = label.trim().toLowerCase().replace(/[:.]$/, '');
+    // A bare number (page number, etc.) is never a real section label, no
+    // matter how short — this must be checked before the short-label
+    // fallback below, which would otherwise happily accept it.
+    if (/^\d+$/.test(norm)) return { matched: false, heading: false };
     if (H3_SECTION_KEYWORDS.includes(norm)) return { matched: true, heading: true };
     if (SECTION_KEYWORDS.includes(norm)) return { matched: true, heading: false };
     // Not in our (necessarily incomplete) translated vocabulary — still accept
@@ -152,27 +156,42 @@
     return text.match(/\s?[—–]\s/) || text.match(/\s-\s/);
   }
 
-  // Running page headers/footers ("Section A Identification Information   15")
-  // follow a distinctive shape regardless of where they sit in the image (a
-  // screenshot spanning a page break can have one in the middle, not just at
-  // the top/bottom): short title text, then an isolated bare page number set
-  // off by a much wider gap than normal word spacing (it's right-aligned).
-  // Detected structurally rather than by position so it's caught anywhere.
+  // Running page headers/footers follow a distinctive shape regardless of
+  // where they sit in the image (a screenshot spanning a page break can have
+  // one in the middle, not just at the top/bottom, and the page number can
+  // land on either side, e.g. "Section A Identification Information   15" or
+  // "16   Section A Identification Information"): short title text plus an
+  // isolated bare page number, set off by a much wider gap than normal word
+  // spacing because it sits in the page's outer margin.
+  function medianGap(words) {
+    const gaps = [];
+    for (let i = 0; i < words.length - 1; i += 1) {
+      gaps.push(words[i + 1].bbox.x0 - words[i].bbox.x1);
+    }
+    return gaps.length ? median(gaps) : 10;
+  }
+
   function looksLikePageFooter(line) {
     const words = line.words;
     if (words.length < 2) return false;
+
     const last = words[words.length - 1];
-    if (!/^\d{1,4}$/.test(last.text)) return false;
-    const rest = words.slice(0, -1);
-    const lineText = rest.map((w) => w.text).join(' ');
-    if (lineText.length > 90) return false;
-    const gapBeforeNumber = last.bbox.x0 - rest[rest.length - 1].bbox.x1;
-    const innerGaps = [];
-    for (let i = 0; i < rest.length - 1; i += 1) {
-      innerGaps.push(rest[i + 1].bbox.x0 - rest[i].bbox.x1);
+    if (/^\d{1,4}$/.test(last.text)) {
+      const rest = words.slice(0, -1);
+      const lineText = rest.map((w) => w.text).join(' ');
+      const gap = last.bbox.x0 - rest[rest.length - 1].bbox.x1;
+      if (lineText.length <= 90 && gap > Math.max(medianGap(rest) * 3, 40)) return true;
     }
-    const typicalGap = innerGaps.length ? median(innerGaps) : 10;
-    return gapBeforeNumber > Math.max(typicalGap * 3, 40);
+
+    const first = words[0];
+    if (/^\d{1,4}$/.test(first.text)) {
+      const rest = words.slice(1);
+      const lineText = rest.map((w) => w.text).join(' ');
+      const gap = rest[0].bbox.x0 - first.bbox.x1;
+      if (lineText.length <= 90 && gap > Math.max(medianGap(rest) * 3, 40)) return true;
+    }
+
+    return false;
   }
 
   // Fill-in-the-blank answer grids (bordered single-character boxes, e.g. a
