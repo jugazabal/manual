@@ -152,6 +152,29 @@
     return text.match(/\s?[—–]\s/) || text.match(/\s-\s/);
   }
 
+  // Running page headers/footers ("Section A Identification Information   15")
+  // follow a distinctive shape regardless of where they sit in the image (a
+  // screenshot spanning a page break can have one in the middle, not just at
+  // the top/bottom): short title text, then an isolated bare page number set
+  // off by a much wider gap than normal word spacing (it's right-aligned).
+  // Detected structurally rather than by position so it's caught anywhere.
+  function looksLikePageFooter(line) {
+    const words = line.words;
+    if (words.length < 2) return false;
+    const last = words[words.length - 1];
+    if (!/^\d{1,4}$/.test(last.text)) return false;
+    const rest = words.slice(0, -1);
+    const lineText = rest.map((w) => w.text).join(' ');
+    if (lineText.length > 90) return false;
+    const gapBeforeNumber = last.bbox.x0 - rest[rest.length - 1].bbox.x1;
+    const innerGaps = [];
+    for (let i = 0; i < rest.length - 1; i += 1) {
+      innerGaps.push(rest[i + 1].bbox.x0 - rest[i].bbox.x1);
+    }
+    const typicalGap = innerGaps.length ? median(innerGaps) : 10;
+    return gapBeforeNumber > Math.max(typicalGap * 3, 40);
+  }
+
   function flattenLines(blocks) {
     const lines = [];
     (blocks || []).forEach((block) => {
@@ -213,7 +236,7 @@
   }
 
   function convertBlocksToHtml(blocks) {
-    const lines = flattenLines(blocks);
+    const lines = flattenLines(blocks).filter((line) => !looksLikePageFooter(line));
     if (!lines.length) return '';
 
     const leftMargin = Math.min(...lines.map((l) => l.words[0].bbox.x0));
