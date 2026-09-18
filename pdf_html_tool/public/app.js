@@ -154,11 +154,13 @@
     return /^\d{1,3}\.$/.test(marker) ? normalizeListNumber(marker) : marker + ' ';
   }
 
-  // Em/en dashes sometimes have no leading space in justified/reflowed source
-  // text (kerning quirks), so only the trailing space is required for those;
-  // a plain hyphen still needs both sides to avoid splitting hyphenated words.
+  // Em/en dashes can end up with no space on either side when OCR glues them
+  // onto an adjacent word ("exemple)—Un", "mentale—Une" — confirmed on real
+  // screenshots), so neither side is required for those; a real word never
+  // contains an em/en dash, so this can't collide with genuine text. A plain
+  // hyphen still needs both sides to avoid splitting hyphenated words.
   function findDashSplit(text) {
-    return text.match(/\s?[—–]\s/) || text.match(/\s-\s/);
+    return text.match(/\s?[—–]\s?/) || text.match(/\s-\s/);
   }
 
   // Running page headers/footers follow a distinctive shape regardless of
@@ -365,13 +367,14 @@
     return escapeHtml(cleanText(p.text));
   }
 
-  function renderParagraphGroup(paras) {
+  function renderParagraphGroup(paras, allowLeadingTerm) {
     return paras.map((p, pi) => {
-      if (pi === paras.length - 1) return renderParagraph(p, pi === 0);
+      const isFirst = pi === 0 && !!allowLeadingTerm;
+      if (pi === paras.length - 1) return renderParagraph(p, isFirst);
       const next = paras[pi + 1];
       const bothListItems = !!looksLikeListMarker(p.text) && !!looksLikeListMarker(next.text);
       const br = bothListItems ? (p.text.length > 90 ? '<br><br>' : '<br>') : '<br><br>';
-      return renderParagraph(p, pi === 0) + br;
+      return renderParagraph(p, isFirst) + br;
     }).join('\n');
   }
 
@@ -434,13 +437,28 @@
         let j = i + 1;
         while (j < events.length && events[j].type === 'content') { group.push(events[j]); j += 1; }
         out.push(renderParagraphGroup(mergeParagraphs(group, medianLineH)));
+        if (j < events.length) out.push('<br><br>');
         i = j;
         continue;
       }
       if (!sawTitle && looksLikeItemCode(ev.label)) {
-        out.push(`<b>${escapeHtml(fixItemCode(ev.label))}${ev.text ? ' ' + escapeHtml(ev.text) : ''}</b><br><br>`);
+        // A title can wrap onto a second line (e.g. a country-specific
+        // annotation like "[Propre au pays—Canada]"): that line has no label
+        // of its own, so it comes through as a separate content event with a
+        // tight gap right under the title. Absorb any such tightly-spaced
+        // continuation into the bold title itself, rather than treating it as
+        // stray content (which would wrongly run it through prose rendering).
+        let titleText = fixItemCode(ev.label) + (ev.text ? ' ' + ev.text : '');
+        let prevY1 = ev.y1;
+        let j = i + 1;
+        while (j < events.length && events[j].type === 'content' && (events[j].y0 - prevY1) < 0.6 * medianLineH) {
+          titleText += ' ' + events[j].text;
+          prevY1 = events[j].y1;
+          j += 1;
+        }
+        out.push(`<b>${escapeHtml(cleanText(titleText))}</b><br><br>`);
         sawTitle = true;
-        i += 1;
+        i = j;
         continue;
       }
       const contentEvents = [];
@@ -450,7 +468,7 @@
       const paras = mergeParagraphs(contentEvents, medianLineH);
       const info = sectionKeywordInfo(ev.label);
       const labelHtml = info.heading ? `<h3>${escapeHtml(ev.label)}</h3>` : `<b>${escapeHtml(ev.label)}</b>`;
-      const inner = renderParagraphGroup(paras);
+      const inner = renderParagraphGroup(paras, true);
       out.push(`${labelHtml}\n<div style="padding-left:3em;">\n${inner}\n</div>`);
       if (j < events.length) out.push('<br>');
       i = j;
