@@ -49,7 +49,7 @@
 
   // The manual style deliberately pads numbered list items with three spaces,
   // e.g. "1.   Married". Enforced explicitly rather than trying to detect
-  // "intentional" runs.
+  // "intentional" spacing runs from OCR/typed text.
   function normalizeListNumber(text) {
     return text.replace(/^(\d{1,3}\.)\s*/, '$1   ');
   }
@@ -206,6 +206,91 @@
     return /^[A-Za-z0-9](\s+[A-Za-z0-9])*$/.test(text);
   }
 
+  // Tesseract's font-attribute detection (is_bold/font_name) is unavailable
+  // in the default LSTM engine — confirmed empty even for words that are
+  // visibly bold (section labels) on real screenshots, so it can't be used.
+  // Instead, measure ink density (fraction of dark pixels) inside each
+  // word's bounding box: bold strokes are thicker, so bold words have
+  // measurably higher density than regular words of the same font size.
+  // Comparison is bucketed by word height so it isn't confounded by
+  // heading-vs-body font-size differences.
+  const BOLD_DENSITY_RATIO = 1.22;
+
+  function computeInkDensity(pixels, width, height, bbox, inverted) {
+    const x0 = Math.max(0, Math.floor(bbox.x0));
+    const y0 = Math.max(0, Math.floor(bbox.y0));
+    const x1 = Math.min(width, Math.ceil(bbox.x1));
+    const y1 = Math.min(height, Math.ceil(bbox.y1));
+    let ink = 0;
+    let total = 0;
+    for (let y = y0; y < y1; y += 1) {
+      for (let x = x0; x < x1; x += 1) {
+        const idx = (width * y + x) * 4;
+        const lum = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
+        if (inverted ? lum > 115 : lum < 140) ink += 1;
+        total += 1;
+      }
+    }
+    return total ? ink / total : 0;
+  }
+
+  // Mutates word objects in `lines` with a `.bold` flag. `pixelInfo` is
+  // `{ data, width, height, inverted }` from the source canvas, or falsy to
+  // skip bold detection entirely (e.g. when no image is available, as in
+  // tests that feed synthetic layout data with no pixels behind it).
+  function computeBoldFlags(lines, pixelInfo) {
+    if (!pixelInfo) return;
+    const { data, width, height, inverted } = pixelInfo;
+    const measurable = [];
+    // Words under 3 real characters (Il, Le, Un, ...) are excluded: their
+    // bounding boxes are small enough that anti-aliasing noise along the
+    // glyph edges swings the density measurement too much to trust.
+    lines.forEach((line) => {
+      const lineSeq = [];
+      line.words.forEach((w) => {
+        if (w.text.replace(/[^\p{L}\p{N}]/gu, '').length >= 3) {
+          const h = w.bbox.y1 - w.bbox.y0;
+          const entry = { w, h, density: computeInkDensity(data, width, height, w.bbox, inverted) };
+          lineSeq.push(entry);
+          measurable.push(entry);
+        }
+      });
+      line.boldSeq = lineSeq;
+    });
+
+    const buckets = {};
+    measurable.forEach((m) => {
+      const key = Math.round(m.h / 2) * 2;
+      (buckets[key] = buckets[key] || []).push(m.density);
+    });
+    const medianOf = {};
+    Object.keys(buckets).forEach((k) => { medianOf[k] = median(buckets[k]); });
+    measurable.forEach((m) => {
+      m.med = medianOf[Math.round(m.h / 2) * 2];
+      if (m.med > 0 && m.density > m.med * BOLD_DENSITY_RATIO) m.w.bold = true;
+    });
+    lines.forEach((line) => { delete line.boldSeq; });
+  }
+
+  // Renders a run of words with bold spans wrapped in <b>, for plain prose
+  // where inline bold (e.g. a bolded code value inside a sentence) has no
+  // structural marker to detect it by — only the pixel-density signal above.
+  function renderProseWords(words) {
+    const parts = [];
+    let i = 0;
+    while (i < words.length) {
+      if (words[i].bold) {
+        const run = [];
+        while (i < words.length && words[i].bold) { run.push(words[i].text); i += 1; }
+        parts.push(`<b>${escapeHtml(run.join(' '))}</b>`);
+      } else {
+        parts.push(escapeHtml(words[i].text));
+        i += 1;
+      }
+    }
+    return parts.join(' ');
+  }
+
   function flattenLines(blocks) {
     const lines = [];
     (blocks || []).forEach((block) => {
@@ -231,8 +316,9 @@
       const isListStart = !!looksLikeListMarker(ev.text);
       if (current && gap < 0.6 * medianLineH && !isListStart) {
         current.text = cleanText(current.text + ' ' + ev.text);
+        if (ev.words) current.words = (current.words || []).concat(ev.words);
       } else {
-        current = { text: ev.text };
+        current = { text: ev.text, words: ev.words ? ev.words.slice() : undefined };
         paras.push(current);
       }
       prevY1 = ev.y1;
@@ -253,6 +339,7 @@
       }
       return `<b>${escapeHtml(prefix)}${escapeHtml(cleanText(listInfo.rest))}</b>`;
     }
+    if (p.words && p.words.length) return renderProseWords(p.words);
     return escapeHtml(cleanText(p.text));
   }
 
@@ -266,11 +353,13 @@
     }).join('\n');
   }
 
-  function convertBlocksToHtml(blocks) {
+  function convertBlocksToHtml(blocks, pixelInfo) {
     const lines = flattenLines(blocks)
       .filter((line) => !looksLikePageFooter(line))
       .filter((line) => !looksLikeAnswerBoxGrid(line));
     if (!lines.length) return '';
+
+    computeBoldFlags(lines, pixelInfo);
 
     const leftMargin = Math.min(...lines.map((l) => l.words[0].bbox.x0));
     const medianLineH = median(lines.map((l) => l.bbox.y1 - l.bbox.y0));
@@ -309,8 +398,8 @@
     lines.forEach((line) => {
       const { label, words } = splitLine(line);
       const text = cleanText(words.map((w) => w.text).join(' '));
-      if (label) events.push({ type: 'label', label, text, y0: line.bbox.y0, y1: line.bbox.y1 });
-      else if (text) events.push({ type: 'content', text, y0: line.bbox.y0, y1: line.bbox.y1 });
+      if (label) events.push({ type: 'label', label, text, words, y0: line.bbox.y0, y1: line.bbox.y1 });
+      else if (text) events.push({ type: 'content', text, words, y0: line.bbox.y0, y1: line.bbox.y1 });
     });
 
     const out = [];
@@ -333,7 +422,7 @@
         continue;
       }
       const contentEvents = [];
-      if (ev.text) contentEvents.push({ text: ev.text, y0: ev.y0, y1: ev.y1 });
+      if (ev.text) contentEvents.push({ text: ev.text, words: ev.words, y0: ev.y0, y1: ev.y1 });
       let j = i + 1;
       while (j < events.length && events[j].type === 'content') { contentEvents.push(events[j]); j += 1; }
       const paras = mergeParagraphs(contentEvents, medianLineH);
@@ -449,7 +538,11 @@
           }
           ctx.putImageData(imageData, 0, 0);
         }
-        canvas.toBlob((blob) => resolve({ blob, inverted }), 'image/png');
+        canvas.toBlob((blob) => resolve({
+          blob,
+          inverted,
+          pixelInfo: { data: imageData.data, width: canvas.width, height: canvas.height, inverted },
+        }), 'image/png');
       };
       img.onerror = () => reject(new Error('Could not load the image for OCR preprocessing.'));
       img.src = URL.createObjectURL(file);
@@ -477,7 +570,7 @@
     ocrProgress.value = 0;
     ocrStatus.textContent = 'Preparing image...';
     try {
-      const { blob, inverted } = await prepareImageForOcr(currentImageFile);
+      const { blob, inverted, pixelInfo } = await prepareImageForOcr(currentImageFile);
       ocrStatus.textContent = (inverted ? 'Dark background detected — inverted for OCR. ' : '') + 'Loading OCR engine...';
       const worker = await Tesseract.createWorker(ocrLanguage.value, 1, {
         logger: (m) => {
@@ -491,7 +584,7 @@
       rawTextOutput.textContent = data.text;
       rawTextDetails.classList.remove('hidden');
 
-      const html = convertBlocksToHtml(data.blocks);
+      const html = convertBlocksToHtml(data.blocks, pixelInfo);
       if (appendToggle.checked && htmlOutput.value.trim()) {
         htmlOutput.value = htmlOutput.value.trim() + '\n\n' + html;
       } else {
