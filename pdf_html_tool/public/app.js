@@ -130,13 +130,18 @@
 
   // Numeric markers may omit trailing punctuation entirely (some localized
   // manuals render "1 Texte" instead of "1. Texte"); alphabetic markers still
-  // require a period/paren closer so an ordinary word isn't mistaken for one.
+  // require a closer so an ordinary word isn't mistaken for one. A comma is
+  // accepted as a closer too (OCR commonly misreads "." as "," in bold small
+  // caps, e.g. "B4f," for "B4f."), but only when the marker also contains a
+  // digit — a bare word followed by a comma ("In,") is far more likely to
+  // just be a comma in prose than a misread item code.
   function looksLikeListMarker(text) {
-    const m = text.match(/^([A-Za-z]{1,3}\d{0,3}[a-z]{0,2}[.)]|\d{1,3}[.)]?)\s+(.*)$/);
+    const m = text.match(/^([A-Za-z]{1,3}\d{0,3}[a-z]{0,2}[.,)]|\d{1,3}[.,)]?)\s+(.*)$/);
     if (!m) return null;
     const raw = m[1];
+    if (raw.endsWith(',') && !/\d/.test(raw)) return null;
     const closer = raw.endsWith(')') ? ')' : '.';
-    const bare = /[.)]$/.test(raw) ? raw.slice(0, -1) : raw;
+    const bare = /[.,)]$/.test(raw) ? raw.slice(0, -1) : raw;
     // No padding applied here — it's added at render time (padMarker) so it's
     // applied exactly once regardless of how the marker is subsequently used.
     return { marker: fixItemCode(bare) + closer, rest: m[2] };
@@ -326,7 +331,16 @@
     return paras;
   }
 
-  function renderParagraph(p) {
+  // A "Term — description" leading definition with no numbered/lettered
+  // marker at all (e.g. a Définition section with just one entry: "Langue
+  // maternelle — Langue de préférence..."), vs. the same convention but with
+  // a marker ("B4f. Terme — description"), which looksLikeListMarker already
+  // catches. Only tried on a section's first paragraph, and only when the
+  // dash shows up early enough to plausibly be a short term rather than a
+  // dash used mid-sentence for a parenthetical aside.
+  const LEADING_TERM_MAX_CHARS = 60;
+
+  function renderParagraph(p, isFirstInSection) {
     const listInfo = looksLikeListMarker(p.text);
     if (listInfo) {
       const prefix = padMarker(listInfo.marker);
@@ -339,17 +353,25 @@
       }
       return `<b>${escapeHtml(prefix)}${escapeHtml(cleanText(listInfo.rest))}</b>`;
     }
+    if (isFirstInSection) {
+      const dashMatch = findDashSplit(p.text);
+      if (dashMatch && dashMatch.index > 0 && dashMatch.index <= LEADING_TERM_MAX_CHARS) {
+        const before = cleanText(p.text.slice(0, dashMatch.index));
+        const after = cleanText(p.text.slice(dashMatch.index + dashMatch[0].length));
+        if (before && after) return `<b>${escapeHtml(before)}</b> — ${escapeHtml(after)}`;
+      }
+    }
     if (p.words && p.words.length) return renderProseWords(p.words);
     return escapeHtml(cleanText(p.text));
   }
 
   function renderParagraphGroup(paras) {
     return paras.map((p, pi) => {
-      if (pi === paras.length - 1) return renderParagraph(p);
+      if (pi === paras.length - 1) return renderParagraph(p, pi === 0);
       const next = paras[pi + 1];
       const bothListItems = !!looksLikeListMarker(p.text) && !!looksLikeListMarker(next.text);
       const br = bothListItems ? (p.text.length > 90 ? '<br><br>' : '<br>') : '<br><br>';
-      return renderParagraph(p) + br;
+      return renderParagraph(p, pi === 0) + br;
     }).join('\n');
   }
 
