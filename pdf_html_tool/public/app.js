@@ -175,6 +175,18 @@
     return gapBeforeNumber > Math.max(typicalGap * 3, 40);
   }
 
+  // Fill-in-the-blank answer grids (bordered single-character boxes, e.g. a
+  // Canadian postal code entry "Z 1 Z   1 Z 1" or a mostly-empty variant with
+  // just one filled box, "1") are UI widgets, not manual text — they contain
+  // nothing but isolated single-character tokens with no real words. A line
+  // made up entirely of such tokens (even just one) is excluded; anything
+  // with an actual multi-character word (including the explanatory caption
+  // that follows, e.g. "(pour les sans-abri)") is left untouched.
+  function looksLikeAnswerBoxGrid(line) {
+    const text = line.words.map((w) => w.text).join(' ');
+    return /^[A-Za-z0-9](\s+[A-Za-z0-9])*$/.test(text);
+  }
+
   function flattenLines(blocks) {
     const lines = [];
     (blocks || []).forEach((block) => {
@@ -236,7 +248,9 @@
   }
 
   function convertBlocksToHtml(blocks) {
-    const lines = flattenLines(blocks).filter((line) => !looksLikePageFooter(line));
+    const lines = flattenLines(blocks)
+      .filter((line) => !looksLikePageFooter(line))
+      .filter((line) => !looksLikeAnswerBoxGrid(line));
     if (!lines.length) return '';
 
     const leftMargin = Math.min(...lines.map((l) => l.words[0].bbox.x0));
