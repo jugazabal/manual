@@ -314,18 +314,20 @@
     return lines;
   }
 
-  function mergeParagraphs(contentEvents, medianLineH) {
+  function mergeParagraphs(contentEvents, medianLineH, gapRatio) {
+    const ratio = gapRatio == null ? 0.6 : gapRatio;
     const paras = [];
     let current = null;
     let prevY1 = null;
     contentEvents.forEach((ev) => {
       const gap = prevY1 == null ? Infinity : ev.y0 - prevY1;
       const isListStart = !!looksLikeListMarker(ev.text);
-      if (current && gap < 0.6 * medianLineH && !isListStart) {
+      if (current && gap < ratio * medianLineH && !isListStart) {
         current.text = cleanText(current.text + ' ' + ev.text);
         if (ev.words) current.words = (current.words || []).concat(ev.words);
       } else {
-        current = { text: ev.text, words: ev.words ? ev.words.slice() : undefined };
+        const x0 = ev.words && ev.words.length ? ev.words[0].bbox.x0 : null;
+        current = { text: ev.text, words: ev.words ? ev.words.slice() : undefined, x0 };
         paras.push(current);
       }
       prevY1 = ev.y1;
@@ -380,6 +382,53 @@
       const br = bothListItems ? (p.text.length > 90 ? '<br><br>' : '<br>') : '<br><br>';
       return renderParagraph(p, allowLeadingTerm) + br;
     }).join('\n');
+  }
+
+  // Bulleted sub-lists have no marker character to detect at all — OCR drops
+  // bullet glyphs (■, •, ...) entirely, confirmed on a real screenshot, so
+  // this relies purely on geometry: bullet items sit at a deeper indent than
+  // the section's own intro sentence. The catch is that a numbered/lettered
+  // item's WRAPPED lines sit at that same deeper indent too (hanging indent:
+  // the marker line starts shallow, its continuation lines align under the
+  // text rather than the marker — confirmed on a real screenshot, same ~70px
+  // offset as a genuine bullet indent). So this can't be judged per line —
+  // it has to run on paragraphs (mergeParagraphs already merges continuation
+  // lines correctly via tight-gap + marker-aware logic), classifying each
+  // paragraph by where its FIRST line starts, not any of its later lines.
+  const BULLET_INDENT_RATIO = 1.2;
+  // Tighter than mergeParagraphs' 0.6 default: on a real bullet-list
+  // screenshot, wrapped-continuation gaps measured 4-8px against a 14-25px
+  // range for genuinely separate items/paragraphs (medianLineH 24), and 0.6
+  // (14.4) was just barely wide enough to wrongly swallow the narrowest of
+  // those (14px, the intro-sentence-to-first-item gap) as a continuation.
+  const SECTION_MERGE_GAP_RATIO = 0.45;
+
+  function renderSectionContent(contentEvents, medianLineH) {
+    if (!contentEvents.length) return '';
+    const paras = mergeParagraphs(contentEvents, medianLineH, SECTION_MERGE_GAP_RATIO);
+
+    const knownX0 = paras.map((p) => p.x0).filter((x) => x != null);
+    const baseline = knownX0.length ? Math.min(...knownX0) : 0;
+    const bulletThreshold = Math.max(BULLET_INDENT_RATIO * medianLineH, 35);
+    const flagged = paras.map((p) => ({
+      p,
+      // A marker-led paragraph is never a bullet, regardless of indent —
+      // marker detection is the more reliable, structural signal.
+      isBullet: p.x0 != null && !looksLikeListMarker(p.text) && (p.x0 - baseline) > bulletThreshold,
+    }));
+
+    const runs = [];
+    flagged.forEach((f) => {
+      const last = runs[runs.length - 1];
+      if (last && last.isBullet === f.isBullet) last.paras.push(f.p);
+      else runs.push({ isBullet: f.isBullet, paras: [f.p] });
+    });
+
+    return runs.map((run) => {
+      if (!run.isBullet) return renderParagraphGroup(run.paras, true);
+      const liHtml = run.paras.map((p) => `<li>${renderParagraph(p, false)}</li>`).join('\n<br>\n');
+      return `<ul>\n${liHtml}\n</ul>`;
+    }).join('\n<br><br>\n');
   }
 
   function convertBlocksToHtml(blocks, pixelInfo) {
@@ -469,10 +518,9 @@
       if (ev.text) contentEvents.push({ text: ev.text, words: ev.words, y0: ev.y0, y1: ev.y1 });
       let j = i + 1;
       while (j < events.length && events[j].type === 'content') { contentEvents.push(events[j]); j += 1; }
-      const paras = mergeParagraphs(contentEvents, medianLineH);
       const info = sectionKeywordInfo(ev.label);
       const labelHtml = info.heading ? `<h3>${escapeHtml(ev.label)}</h3>` : `<b>${escapeHtml(ev.label)}</b>`;
-      const inner = renderParagraphGroup(paras, true);
+      const inner = renderSectionContent(contentEvents, medianLineH);
       out.push(`${labelHtml}\n<div style="padding-left:3em;">\n${inner}\n</div>`);
       if (j < events.length) out.push('<br>');
       i = j;
