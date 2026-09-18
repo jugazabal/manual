@@ -68,10 +68,29 @@
   // every line by hand.
   // ========================================================================
 
+  // Best-effort multi-language vocabulary (interRAI manuals are localized into
+  // many languages — English, French, German, Italian, Finnish, Swedish, ...).
+  // This is only a hint, not a requirement: sectionKeywordInfo() also accepts
+  // any short, unrecognized label, since the two-column layout itself is
+  // already strong evidence, so an untranslated keyword doesn't block a match.
   const SECTION_KEYWORDS = [
     'intent', 'definition', 'definitions', 'process', 'coding', 'discussion',
     'interview', 'rationale', 'note', 'notes', 'examples', 'example',
     'observation', 'record review', 'time frame', 'response',
+    // French
+    'objectif', 'but', 'définition', 'définitions', 'processus', 'codage',
+    'codes', 'discussion', 'entretien', 'justification', 'remarque',
+    'remarques', 'exemples', 'exemple', 'réponse',
+    // German
+    'zweck', 'definition', 'prozess', 'kodierung', 'diskussion', 'hinweis',
+    'hinweise', 'beispiel', 'beispiele', 'antwort',
+    // Italian
+    'scopo', 'definizione', 'processo', 'codifica', 'discussione', 'nota',
+    'note', 'esempio', 'esempi', 'risposta',
+    // Finnish
+    'tarkoitus', 'määritelmä', 'prosessi', 'koodaus', 'esimerkki', 'vastaus',
+    // Swedish
+    'syfte', 'definition', 'process', 'kodning', 'exempel', 'svar',
   ];
   const H3_SECTION_KEYWORDS = ['problem', 'triggers', 'guidelines', 'additional resources'];
 
@@ -95,14 +114,42 @@
     const norm = label.trim().toLowerCase().replace(/[:.]$/, '');
     if (H3_SECTION_KEYWORDS.includes(norm)) return { matched: true, heading: true };
     if (SECTION_KEYWORDS.includes(norm)) return { matched: true, heading: false };
+    // Not in our (necessarily incomplete) translated vocabulary — still accept
+    // it as a section label if it's short, since the two-column layout match
+    // itself (gap + adjacent indented content) is already strong evidence.
+    // This is what makes unrecognized-language manuals work without a
+    // translation for every possible label.
+    const wordCount = norm.split(/\s+/).filter(Boolean).length;
+    if (wordCount <= 3 && norm.length <= 24) return { matched: true, heading: false };
     return { matched: false, heading: false };
   }
 
+  // Numeric markers may omit trailing punctuation entirely (some localized
+  // manuals render "1 Texte" instead of "1. Texte"); alphabetic markers still
+  // require a period/paren closer so an ordinary word isn't mistaken for one.
   function looksLikeListMarker(text) {
-    const m = text.match(/^([A-Za-z]{1,3}\d{0,3}[a-z]{0,2}[.)]|\d{1,3}[.)])\s+(.*)$/);
+    const m = text.match(/^([A-Za-z]{1,3}\d{0,3}[a-z]{0,2}[.)]|\d{1,3}[.)]?)\s+(.*)$/);
     if (!m) return null;
-    const closer = m[1].endsWith(')') ? ')' : '.';
-    return { marker: normalizeListNumber(fixItemCode(m[1].replace(/[.)]$/, '')) + closer), rest: m[2] };
+    const raw = m[1];
+    const closer = raw.endsWith(')') ? ')' : '.';
+    const bare = /[.)]$/.test(raw) ? raw.slice(0, -1) : raw;
+    // No padding applied here — it's added at render time (padMarker) so it's
+    // applied exactly once regardless of how the marker is subsequently used.
+    return { marker: fixItemCode(bare) + closer, rest: m[2] };
+  }
+
+  // The manual style pads a pure-numeric marker with three spaces before the
+  // label ("1.   Married"); alphabetic item codes just get a single space
+  // ("A1a. First name"). Applied once, here, at render time.
+  function padMarker(marker) {
+    return /^\d{1,3}\.$/.test(marker) ? normalizeListNumber(marker) : marker + ' ';
+  }
+
+  // Em/en dashes sometimes have no leading space in justified/reflowed source
+  // text (kerning quirks), so only the trailing space is required for those;
+  // a plain hyphen still needs both sides to avoid splitting hyphenated words.
+  function findDashSplit(text) {
+    return text.match(/\s?[—–]\s/) || text.match(/\s-\s/);
   }
 
   function flattenLines(blocks) {
@@ -142,14 +189,15 @@
   function renderParagraph(p) {
     const listInfo = looksLikeListMarker(p.text);
     if (listInfo) {
-      const dashMatch = listInfo.rest.match(/\s[—–-]\s/);
+      const prefix = padMarker(listInfo.marker);
+      const dashMatch = findDashSplit(listInfo.rest);
       if (dashMatch) {
         const idx = dashMatch.index;
         const before = cleanText(listInfo.rest.slice(0, idx));
         const after = cleanText(listInfo.rest.slice(idx + dashMatch[0].length));
-        return `<b>${escapeHtml(listInfo.marker)} ${escapeHtml(before)}</b> — ${escapeHtml(after)}`;
+        return `<b>${escapeHtml(prefix)}${escapeHtml(before)}</b> — ${escapeHtml(after)}`;
       }
-      return `<b>${escapeHtml(listInfo.marker)} ${escapeHtml(cleanText(listInfo.rest))}</b>`;
+      return `<b>${escapeHtml(prefix)}${escapeHtml(cleanText(listInfo.rest))}</b>`;
     }
     return escapeHtml(cleanText(p.text));
   }
@@ -311,6 +359,47 @@
     fileInput.value = '';
   });
 
+  // Tesseract is trained on dark-text-on-light-background documents and does
+  // noticeably worse on dark-mode UI screenshots (accented characters in
+  // particular get mangled). Detect a dark background by average luminance
+  // and invert it before OCR, since that's cheap and reversible (we hand
+  // Tesseract a converted copy, never touching the original file/preview).
+  function prepareImageForOcr(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d = imageData.data;
+        let sum = 0;
+        let count = 0;
+        const step = Math.max(4, Math.floor(d.length / 4 / 20000) * 4);
+        for (let i = 0; i < d.length; i += step) {
+          sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          count += 1;
+        }
+        const avgLuminance = sum / count;
+        const inverted = avgLuminance < 128;
+        if (inverted) {
+          for (let i = 0; i < d.length; i += 4) {
+            d[i] = 255 - d[i];
+            d[i + 1] = 255 - d[i + 1];
+            d[i + 2] = 255 - d[i + 2];
+          }
+          ctx.putImageData(imageData, 0, 0);
+        }
+        canvas.toBlob((blob) => resolve({ blob, inverted }), 'image/png');
+      };
+      img.onerror = () => reject(new Error('Could not load the image for OCR preprocessing.'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
   // ========================================================================
   // Convert pipeline: OCR (with word/line bounding boxes) -> automatic layout
   // conversion -> HTML output. No per-line tagging step.
@@ -319,6 +408,7 @@
   const htmlOutput = document.getElementById('htmlOutput');
   const htmlPreview = document.getElementById('htmlPreview');
   const copyStatus = document.getElementById('copyStatus');
+  const ocrLanguage = document.getElementById('ocrLanguage');
 
   function refreshPreview() {
     htmlPreview.innerHTML = htmlOutput.value;
@@ -329,15 +419,17 @@
     convertBtn.disabled = true;
     ocrProgress.classList.remove('hidden');
     ocrProgress.value = 0;
-    ocrStatus.textContent = 'Loading OCR engine...';
+    ocrStatus.textContent = 'Preparing image...';
     try {
-      const worker = await Tesseract.createWorker('eng', 1, {
+      const { blob, inverted } = await prepareImageForOcr(currentImageFile);
+      ocrStatus.textContent = (inverted ? 'Dark background detected — inverted for OCR. ' : '') + 'Loading OCR engine...';
+      const worker = await Tesseract.createWorker(ocrLanguage.value, 1, {
         logger: (m) => {
           if (m.status) ocrStatus.textContent = m.status + (m.progress ? ` (${Math.round(m.progress * 100)}%)` : '');
           if (typeof m.progress === 'number') ocrProgress.value = m.progress;
         },
       });
-      const { data } = await worker.recognize(currentImageFile, {}, { blocks: true });
+      const { data } = await worker.recognize(blob, {}, { blocks: true });
       await worker.terminate();
 
       rawTextOutput.textContent = data.text;

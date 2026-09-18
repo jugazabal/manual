@@ -137,6 +137,21 @@ button.danger:hover { background: #fdecea; }
   gap: 6px;
 }
 
+.lang-label {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.lang-label select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
 #rawTextDetails {
   margin-top: 8px;
   font-size: 12.5px;
