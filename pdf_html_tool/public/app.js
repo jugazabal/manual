@@ -23,7 +23,48 @@
       .replace(/>/g, '&gt;');
   }
 
-  // Restrict contenteditable output to b/i/u/text only.
+  // Strip ASCII control characters (0x00-0x08, 0x0B, 0x0C, 0x0E-0x1F, 0x7F) via
+  // char codes, rather than embedding literal control bytes in this source file.
+  function stripControlChars(str) {
+    let out = '';
+    for (let i = 0; i < str.length; i += 1) {
+      const code = str.charCodeAt(i);
+      const isControl = code <= 8 || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127;
+      if (!isControl) out += str[i];
+    }
+    return out;
+  }
+
+  function cleanFragment(str) {
+    if (!str) return '';
+    const out = str
+      .normalize('NFC')
+      .replace(/ﬀ/g, 'ff')
+      .replace(/ﬁ/g, 'fi')
+      .replace(/ﬂ/g, 'fl')
+      .replace(/ﬃ/g, 'ffi')
+      .replace(/ﬄ/g, 'ffl')
+      .replace(/[​-‍﻿­]/g, '') // zero-width, BOM, soft hyphen
+      .replace(/[  -   　]/g, ' ') // unicode spaces -> regular space
+      .replace(/�/g, '') // decoding-failure marker
+      .replace(/ {2,}/g, ' ');
+    return stripControlChars(out);
+  }
+
+  // The manual style deliberately pads numbered list items with three spaces,
+  // e.g. "1.   Married". Since OCR/typed spacing can't be trusted to preserve
+  // that, enforce it explicitly instead of trying to detect "intentional" runs.
+  function normalizeListNumber(text) {
+    return text.replace(/^(\d{1,3}\.)\s*/, '$1   ');
+  }
+
+  // Full clean for a standalone line/value: same as cleanFragment plus trim.
+  function cleanText(str) {
+    return cleanFragment(str).trim();
+  }
+
+  // Restrict contenteditable output to b/i/u/text only, and clean stray
+  // whitespace/control characters out of the text content.
   function sanitizeInline(html) {
     const container = document.createElement('div');
     container.innerHTML = html;
@@ -32,7 +73,10 @@
     function walk(node) {
       const children = Array.from(node.childNodes);
       children.forEach((child) => {
-        if (child.nodeType === Node.TEXT_NODE) return;
+        if (child.nodeType === Node.TEXT_NODE) {
+          child.textContent = cleanFragment(child.textContent);
+          return;
+        }
         if (child.nodeType !== Node.ELEMENT_NODE) {
           child.remove();
           return;
@@ -259,15 +303,15 @@
         autoBtn.textContent = 'Auto-bold before dash';
         autoBtn.title = 'Bolds the text before the first " — " (or "-") and leaves the rest plain, e.g. "1.   Married" bold + " — description" plain.';
         autoBtn.addEventListener('click', () => {
-          const text = row.text || '';
+          const text = normalizeListNumber(cleanText(row.text || ''));
           const dashMatch = text.match(/\s[—–-]\s/);
           if (dashMatch) {
             const idx = dashMatch.index;
             const before = text.slice(0, idx).trim();
-            const after = text.slice(idx + dashMatch[0].length).trim();
+            const after = cleanText(text.slice(idx + dashMatch[0].length));
             row.html = `<b>${escapeHtml(before)}</b> — ${escapeHtml(after)}`;
           } else {
-            row.html = `<b>${escapeHtml(text.trim())}</b>`;
+            row.html = `<b>${escapeHtml(text)}</b>`;
           }
           renderRows();
         });
@@ -299,9 +343,11 @@
   function renderRowContent(row) {
     switch (row.type) {
       case 'title':
-        return `<b>${escapeHtml(row.text || '')}</b>`;
-      case 'section':
-        return row.heading ? `<h3>${escapeHtml(row.text || '')}</h3>` : `<b>${escapeHtml(row.text || '')}</b>`;
+        return `<b>${escapeHtml(cleanText(row.text || ''))}</b>`;
+      case 'section': {
+        const label = escapeHtml(cleanText(row.text || ''));
+        return row.heading ? `<h3>${label}</h3>` : `<b>${label}</b>`;
+      }
       case 'text':
         return row.html || '';
       case 'list':
@@ -445,7 +491,7 @@
       await worker.terminate();
       const lines = data.text
         .split('\n')
-        .map((l) => l.trim())
+        .map((l) => cleanText(l))
         .filter((l) => l.length > 0);
       lines.forEach((line) => addRow('text', line));
       ocrStatus.textContent = `Done — added ${lines.length} line(s) to the builder below.`;
