@@ -333,16 +333,21 @@
     return paras;
   }
 
-  // A "Term — description" leading definition with no numbered/lettered
-  // marker at all (e.g. a Définition section with just one entry: "Langue
-  // maternelle — Langue de préférence..."), vs. the same convention but with
-  // a marker ("B4f. Terme — description"), which looksLikeListMarker already
-  // catches. Only tried on a section's first paragraph, and only when the
-  // dash shows up early enough to plausibly be a short term rather than a
-  // dash used mid-sentence for a parenthetical aside.
+  // A "Term — description" entry with no numbered/lettered marker at all
+  // (e.g. a lone Définition: "Langue maternelle — Langue de préférence...",
+  // or an unnumbered checkbox-style Codes list where every option is its own
+  // "Term — description" paragraph — "Noir(e) — Personne d'ascendance
+  // africaine...", "Autochtone — Personne d'ascendance des Premières
+  // Nations...", one after another), vs. the same convention but with a
+  // marker ("B4f. Terme — description"), which looksLikeListMarker already
+  // catches. Applies to every paragraph in a real section (not stray content
+  // before the first section, e.g. a title's continuation line — see
+  // allowLeadingTerm below), and only when the dash shows up early enough to
+  // plausibly be a short term rather than a dash used mid-sentence for a
+  // parenthetical aside.
   const LEADING_TERM_MAX_CHARS = 60;
 
-  function renderParagraph(p, isFirstInSection) {
+  function renderParagraph(p, allowLeadingTerm) {
     const listInfo = looksLikeListMarker(p.text);
     if (listInfo) {
       const prefix = padMarker(listInfo.marker);
@@ -355,7 +360,7 @@
       }
       return `<b>${escapeHtml(prefix)}${escapeHtml(cleanText(listInfo.rest))}</b>`;
     }
-    if (isFirstInSection) {
+    if (allowLeadingTerm) {
       const dashMatch = findDashSplit(p.text);
       if (dashMatch && dashMatch.index > 0 && dashMatch.index <= LEADING_TERM_MAX_CHARS) {
         const before = cleanText(p.text.slice(0, dashMatch.index));
@@ -369,12 +374,11 @@
 
   function renderParagraphGroup(paras, allowLeadingTerm) {
     return paras.map((p, pi) => {
-      const isFirst = pi === 0 && !!allowLeadingTerm;
-      if (pi === paras.length - 1) return renderParagraph(p, isFirst);
+      if (pi === paras.length - 1) return renderParagraph(p, allowLeadingTerm);
       const next = paras[pi + 1];
       const bothListItems = !!looksLikeListMarker(p.text) && !!looksLikeListMarker(next.text);
       const br = bothListItems ? (p.text.length > 90 ? '<br><br>' : '<br>') : '<br><br>';
-      return renderParagraph(p, isFirst) + br;
+      return renderParagraph(p, allowLeadingTerm) + br;
     }).join('\n');
   }
 
