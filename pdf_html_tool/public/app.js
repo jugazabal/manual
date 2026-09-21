@@ -163,6 +163,41 @@
     return text.match(/\s?[—–]\s?/) || text.match(/\s-\s/);
   }
 
+  // A worked-example "conversation" block (assessor/respondent dialogue) is
+  // written as "Speaker: text", one turn per line/paragraph — the same
+  // "short label, colon, more text" shape as everything else here, just with
+  // a much smaller gap than a page-level label/content column split (~45-60px
+  // on a real screenshot vs. the 40px+ threshold tuned for that). Detected by
+  // text pattern instead of geometry for that reason. A lone match (a single
+  // "Label: text" line with no turn before or after it, e.g. "REMARQUE :
+  // ...") is not a real dialogue and is demoted back to prose by the caller —
+  // this pattern alone is too generic to trust in isolation.
+  function looksLikeDialogueLine(text) {
+    const m = text.match(/^([^:]{2,40}):\s+(.+)$/);
+    if (!m) return null;
+    const speaker = cleanText(m[1]);
+    if (!speaker || /\d/.test(speaker)) return null;
+    return { speaker, rest: m[2] };
+  }
+
+  // Best-effort multi-language list of "the person being interviewed" roles,
+  // whose dialogue lines are conventionally italicized in these worked
+  // examples (confirmed both in the target markup and visually in the source
+  // screenshot, where the respondent's lines are rendered in italic font).
+  const DIALOGUE_RESPONDENT_KEYWORDS = [
+    'la personne', 'le client', 'la cliente', 'person', 'client', 'patient',
+    'resident', 'the person', 'the client', 'the resident', 'bewohner',
+    'paziente', 'potilas', 'brukaren',
+  ];
+
+  function renderDialogueRow(p) {
+    const d = looksLikeDialogueLine(p.text);
+    const speaker = escapeHtml(d.speaker);
+    const isRespondent = DIALOGUE_RESPONDENT_KEYWORDS.includes(d.speaker.toLowerCase());
+    const content = escapeHtml(cleanText(d.rest));
+    return `<tr><td><b>${speaker}:</b></td><td>${isRespondent ? `<i>${content}</i>` : content}</td></tr>`;
+  }
+
   // Running page headers/footers follow a distinctive shape regardless of
   // where they sit in the image (a screenshot spanning a page break can have
   // one in the middle, not just at the top/bottom, and the page number can
@@ -321,8 +356,8 @@
     let prevY1 = null;
     contentEvents.forEach((ev) => {
       const gap = prevY1 == null ? Infinity : ev.y0 - prevY1;
-      const isListStart = !!looksLikeListMarker(ev.text);
-      if (current && gap < ratio * medianLineH && !isListStart) {
+      const isNewStart = !!looksLikeListMarker(ev.text) || !!looksLikeDialogueLine(ev.text);
+      if (current && gap < ratio * medianLineH && !isNewStart) {
         current.text = cleanText(current.text + ' ' + ev.text);
         if (ev.words) current.words = (current.words || []).concat(ev.words);
       } else {
@@ -403,32 +438,72 @@
   // those (14px, the intro-sentence-to-first-item gap) as a continuation.
   const SECTION_MERGE_GAP_RATIO = 0.45;
 
-  function renderSectionContent(contentEvents, medianLineH) {
+  function renderSectionContent(contentEvents, medianLineH, options) {
     if (!contentEvents.length) return '';
-    const paras = mergeParagraphs(contentEvents, medianLineH, SECTION_MERGE_GAP_RATIO);
+    const opts = options || {};
+    const allowLeadingTerm = !!opts.allowLeadingTerm;
+    const gapRatio = opts.gapRatio == null ? 0.6 : opts.gapRatio;
+    const paras = mergeParagraphs(contentEvents, medianLineH, gapRatio);
 
     const knownX0 = paras.map((p) => p.x0).filter((x) => x != null);
     const baseline = knownX0.length ? Math.min(...knownX0) : 0;
     const bulletThreshold = Math.max(BULLET_INDENT_RATIO * medianLineH, 35);
-    const flagged = paras.map((p) => ({
-      p,
+    const flagged = paras.map((p) => {
+      const isMarker = !!looksLikeListMarker(p.text);
+      const isDialogue = !isMarker && !!looksLikeDialogueLine(p.text);
       // A marker-led paragraph is never a bullet, regardless of indent —
       // marker detection is the more reliable, structural signal.
-      isBullet: p.x0 != null && !looksLikeListMarker(p.text) && (p.x0 - baseline) > bulletThreshold,
-    }));
+      const isBullet = !isMarker && !isDialogue && p.x0 != null && (p.x0 - baseline) > bulletThreshold;
+      return { p, kind: isDialogue ? 'dialogue' : (isBullet ? 'bullet' : 'prose') };
+    });
 
     const runs = [];
     flagged.forEach((f) => {
       const last = runs[runs.length - 1];
-      if (last && last.isBullet === f.isBullet) last.paras.push(f.p);
-      else runs.push({ isBullet: f.isBullet, paras: [f.p] });
+      if (last && last.kind === f.kind) last.paras.push(f.p);
+      else runs.push({ kind: f.kind, paras: [f.p] });
     });
+    // A single isolated "Label: text" line (e.g. "REMARQUE : ...") isn't a
+    // real dialogue turn — only trust the pattern once it repeats.
+    runs.forEach((run) => { if (run.kind === 'dialogue' && run.paras.length < 2) run.kind = 'prose'; });
 
     return runs.map((run) => {
-      if (!run.isBullet) return renderParagraphGroup(run.paras, true);
-      const liHtml = run.paras.map((p) => `<li>${renderParagraph(p, false)}</li>`).join('\n<br>\n');
-      return `<ul>\n${liHtml}\n</ul>`;
+      if (run.kind === 'bullet') {
+        const liHtml = run.paras.map((p) => `<li>${renderParagraph(p, false)}</li>`).join('\n<br>\n');
+        return `<ul>\n${liHtml}\n</ul>`;
+      }
+      if (run.kind === 'dialogue') {
+        const rows = run.paras.map((p) => renderDialogueRow(p)).join('\n');
+        return `<table border="0">\n${rows}\n</table>`;
+      }
+      return renderParagraphGroup(run.paras, allowLeadingTerm);
     }).join('\n<br><br>\n');
+  }
+
+  // A worked-example page has no item-code title, just a short heading (on
+  // a real screenshot, visibly centered — well clear of the body's own left
+  // margin), directly above single-column body content. Wraps the whole
+  // thing in a box, matching how these callouts are meant to stand out from
+  // regular item content.
+  function renderBoxExample(events, medianLineH) {
+    if (!events.length) return '';
+    let headingText = '';
+    let prevY1 = null;
+    let i = 0;
+    while (i < events.length) {
+      const ev = events[i];
+      const gap = prevY1 == null ? -Infinity : ev.y0 - prevY1;
+      if (i === 0 || gap < 0.6 * medianLineH) {
+        headingText += (headingText ? ' ' : '') + ev.text;
+        prevY1 = ev.y1;
+        i += 1;
+      } else break;
+    }
+    const heading = cleanText(headingText);
+    const rest = events.slice(i);
+    const inner = renderSectionContent(rest, medianLineH, { gapRatio: 0.6 });
+    const headingHtml = heading ? `<b>${escapeHtml(heading)}</b>\n<br><br>\n\n` : '';
+    return `<div class="box">\n${headingHtml}${inner}\n</div>`;
   }
 
   function convertBlocksToHtml(blocks, pixelInfo) {
@@ -474,11 +549,33 @@
 
     const events = [];
     lines.forEach((line) => {
+      // Dialogue lines ("Évaluateur : ...", "La personne: ...") match the
+      // same "label, gap, content" shape splitLine looks for, but with a
+      // much smaller gap tuned for a different purpose (page-level column
+      // splits). Intercepted here by text pattern before splitLine ever
+      // sees them, so they can't be mistaken for a section label via the
+      // short-label fallback.
+      const lineText = cleanText(line.words.map((w) => w.text).join(' '));
+      if (looksLikeDialogueLine(lineText)) {
+        events.push({ type: 'content', text: lineText, words: line.words, y0: line.bbox.y0, y1: line.bbox.y1 });
+        return;
+      }
       const { label, words } = splitLine(line);
       const text = cleanText(words.map((w) => w.text).join(' '));
       if (label) events.push({ type: 'label', label, text, words, y0: line.bbox.y0, y1: line.bbox.y1 });
       else if (text) events.push({ type: 'content', text, words, y0: line.bbox.y0, y1: line.bbox.y1 });
     });
+
+    // A "worked example" page (a callout box demonstrating how to code an
+    // item, e.g. a sample assessor/respondent conversation) has no recognized
+    // label at all — no item-code title, no section keyword like Objectif or
+    // Codes — just a plain heading, with its body a single flat column
+    // rather than the usual label/content structure. This must be "no label
+    // anywhere", not "no item-code title": a screenshot can be legitimately
+    // cropped to show only a Définition/Codes section with no title line in
+    // frame, and that's still normal item content, not a worked example.
+    const hasAnyLabel = events.some((ev) => ev.type === 'label');
+    if (!hasAnyLabel) return renderBoxExample(events, medianLineH);
 
     const out = [];
     let i = 0;
@@ -489,7 +586,7 @@
         const group = [ev];
         let j = i + 1;
         while (j < events.length && events[j].type === 'content') { group.push(events[j]); j += 1; }
-        out.push(renderParagraphGroup(mergeParagraphs(group, medianLineH)));
+        out.push(renderSectionContent(group, medianLineH, { gapRatio: 0.6 }));
         if (j < events.length) out.push('<br><br>');
         i = j;
         continue;
@@ -520,7 +617,7 @@
       while (j < events.length && events[j].type === 'content') { contentEvents.push(events[j]); j += 1; }
       const info = sectionKeywordInfo(ev.label);
       const labelHtml = info.heading ? `<h3>${escapeHtml(ev.label)}</h3>` : `<b>${escapeHtml(ev.label)}</b>`;
-      const inner = renderSectionContent(contentEvents, medianLineH);
+      const inner = renderSectionContent(contentEvents, medianLineH, { allowLeadingTerm: true, gapRatio: SECTION_MERGE_GAP_RATIO });
       out.push(`${labelHtml}\n<div style="padding-left:3em;">\n${inner}\n</div>`);
       if (j < events.length) out.push('<br>');
       i = j;
