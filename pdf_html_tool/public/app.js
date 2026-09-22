@@ -500,6 +500,34 @@
     return segments;
   }
 
+  // A table cell's concluding scoring statement always mentions a code and a
+  // quoted or "=" value ("Code = 6, Dépendance totale"; "Dans cette
+  // catégorie, le code «8» devrait être attribué à..."), consistently and
+  // entirely bold in every example seen — a reliable text-pattern signal,
+  // unlike relying on the pixel-density bold fallback for a whole sentence.
+  function looksLikeCodingStatement(text) {
+    const norm = text.toLowerCase();
+    return /\bcode\b/.test(norm) && /[«"][^»"]*[»"]|=\s*\d/.test(text);
+  }
+
+  // The narrative sentence right before a coding statement is sometimes
+  // merged into the same paragraph (the OCR gap between them isn't always
+  // wide enough to register as a paragraph break on its own), which would
+  // otherwise bold that leading sentence too. Split at the phrase that
+  // starts the coding statement instead of requiring the whole paragraph to
+  // match, so only the statement itself — not what precedes it — gets bold.
+  const CODING_STATEMENT_STARTS = [/dans cette catégorie/i, /utilisez le code\b/i, /\bcode\s*=/i];
+
+  function splitCodingStatement(text) {
+    for (const re of CODING_STATEMENT_STARTS) {
+      const m = text.match(re);
+      if (m && looksLikeCodingStatement(text.slice(m.index))) {
+        return { before: cleanText(text.slice(0, m.index)), statement: cleanText(text.slice(m.index)) };
+      }
+    }
+    return null;
+  }
+
   // Deliberately requires 3+ segments (2+ gaps): a line with exactly one big
   // gap is the normal "Label: content" shape splitLine already handles
   // correctly, and must be left alone — only a genuine multi-column header
@@ -516,9 +544,18 @@
     if (!words || words.length < 2) return null;
     const segments = splitByBigGaps(words, medianLineH);
     if (segments.length < 2) return null;
+    // Anchor each boundary to where the NEXT column starts, not the midpoint
+    // between this column's header and the next one's. A column's own body
+    // text commonly wraps far wider than its (short) header label — on a
+    // real screenshot, column 0's header ("AIVQ") ended around x=100 but its
+    // wrapped body text legitimately ran out past x=480, while column 1's
+    // body text reliably started right where its own header did (~578).
+    // Using the header-to-header midpoint (~340) clipped column 0's own
+    // overflow words into column 1; anchoring to column 1's known start
+    // (minus a small buffer) keeps them correctly in column 0 instead.
     const bounds = [];
     for (let i = 0; i < segments.length - 1; i += 1) {
-      bounds.push((segments[i][segments[i].length - 1].bbox.x1 + segments[i + 1][0].bbox.x0) / 2);
+      bounds.push(segments[i + 1][0].bbox.x0 - 10);
     }
     const headers = segments.map((seg) => cleanText(seg.map((w) => w.text).join(' ')));
     return { bounds, headers };
@@ -579,7 +616,21 @@
     function renderCell(cellEvents) {
       if (!cellEvents.length) return '';
       const paras = mergeParagraphs(cellEvents, medianLineH, 0.6);
-      return paras.map((p) => renderParagraph(p, false)).join('\n<br><br>\n');
+      return paras.map((p) => {
+        // A cell's concluding scoring statement ("Code = 6, Dépendance
+        // totale", "Dans cette catégorie, le code «8» devrait être
+        // attribué...") is consistently rendered entirely bold across every
+        // example seen — a structural convention, not something worth
+        // leaving to the pixel-density fallback, which is confirmed
+        // unreliable at fully covering a multi-word bold run.
+        const split = splitCodingStatement(p.text);
+        if (split) {
+          const prefix = split.before ? `${escapeHtml(split.before)}<br><br>\n` : '';
+          return `${prefix}<b>${escapeHtml(split.statement)}</b>`;
+        }
+        if (looksLikeCodingStatement(p.text)) return `<b>${escapeHtml(cleanText(p.text))}</b>`;
+        return renderParagraph(p, false);
+      }).join('\n<br><br>\n');
     }
 
     const headHtml = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
