@@ -480,6 +480,113 @@
     }).join('\n<br><br>\n');
   }
 
+  // A genuine gridded data table (header row + N columns, e.g. an AIVQ/IADL
+  // coding-examples table) is a different shape from the 2-column "Speaker:
+  // text" dialogue table: it has a real header row with 2+ big gaps within
+  // one Tesseract-merged line (the same shape splitLine looks for, just with
+  // multiple splits instead of one), and its columns can span many wrapped
+  // lines that Tesseract itself merges together across columns. Detected by
+  // that header shape; column boundaries come from where the header segments
+  // start, and every later line's words are bucketed into columns by
+  // x-position rather than trusting Tesseract's own line grouping.
+  function splitByBigGaps(words, medianLineH) {
+    const threshold = Math.max(3 * medianLineH, 60);
+    const segments = [[words[0]]];
+    for (let i = 1; i < words.length; i += 1) {
+      const gap = words[i].bbox.x0 - words[i - 1].bbox.x1;
+      if (gap > threshold) segments.push([words[i]]);
+      else segments[segments.length - 1].push(words[i]);
+    }
+    return segments;
+  }
+
+  // Deliberately requires 3+ segments (2+ gaps): a line with exactly one big
+  // gap is the normal "Label: content" shape splitLine already handles
+  // correctly, and must be left alone — only a genuine multi-column header
+  // (3+ columns) needs to bypass splitLine's single-label detection.
+  function looksLikeMultiColumnHeader(line, medianLineH) {
+    const words = line.words;
+    if (!words || words.length < 2) return false;
+    const segments = splitByBigGaps(words, medianLineH);
+    return segments.length >= 3 && segments.length <= 6;
+  }
+
+  function detectGridTableColumns(headerEvent, medianLineH) {
+    const words = headerEvent && headerEvent.words;
+    if (!words || words.length < 2) return null;
+    const segments = splitByBigGaps(words, medianLineH);
+    if (segments.length < 2) return null;
+    const bounds = [];
+    for (let i = 0; i < segments.length - 1; i += 1) {
+      bounds.push((segments[i][segments[i].length - 1].bbox.x1 + segments[i + 1][0].bbox.x0) / 2);
+    }
+    const headers = segments.map((seg) => cleanText(seg.map((w) => w.text).join(' ')));
+    return { bounds, headers };
+  }
+
+  // Rows are segmented using column 0's own paragraph gaps rather than
+  // Tesseract's line grouping, since column 0 (the case description) is
+  // reliably present for every row while the other columns may wrap to a
+  // different number of physical lines within the same logical row.
+  function renderGridTable(events, medianLineH) {
+    if (!events.length) return null;
+    const cols = detectGridTableColumns(events[0], medianLineH);
+    if (!cols) return null;
+    const { bounds, headers } = cols;
+    const numCols = headers.length;
+    function columnOf(x0) {
+      for (let i = 0; i < bounds.length; i += 1) if (x0 < bounds[i]) return i;
+      return numCols - 1;
+    }
+
+    const bodyEvents = events.slice(1);
+    const col0Lines = bodyEvents.filter((ev) => ev.words && ev.words.length && columnOf(ev.words[0].bbox.x0) === 0);
+    if (!col0Lines.length) return null;
+    // On a real screenshot, within-paragraph continuation gaps measured 2-9px
+    // against 27px+ for a genuine row boundary (medianLineH 23) — a full
+    // line height comfortably separates the two with margin on both sides.
+    const rowGapThreshold = Math.max(medianLineH, 20);
+    const rowStartsY = [];
+    let prevY1 = null;
+    col0Lines.forEach((ev) => {
+      const gap = prevY1 == null ? Infinity : ev.y0 - prevY1;
+      if (gap > rowGapThreshold) rowStartsY.push(ev.y0);
+      prevY1 = ev.y1;
+    });
+    if (!rowStartsY.length) return null;
+
+    const rows = rowStartsY.map((y0, i) => ({
+      y0,
+      cells: Array.from({ length: numCols }, () => []),
+    }));
+    function rowIndexFor(y) {
+      for (let i = rows.length - 1; i >= 0; i -= 1) if (y >= rows[i].y0) return i;
+      return 0;
+    }
+
+    bodyEvents.forEach((ev) => {
+      if (!ev.words || !ev.words.length) return;
+      const byCol = Array.from({ length: numCols }, () => []);
+      ev.words.forEach((w) => { byCol[columnOf(w.bbox.x0)].push(w); });
+      const rIdx = rowIndexFor(ev.y0);
+      byCol.forEach((wordsInCol, colIdx) => {
+        if (!wordsInCol.length) return;
+        const text = cleanText(wordsInCol.map((w) => w.text).join(' '));
+        if (text) rows[rIdx].cells[colIdx].push({ text, words: wordsInCol, y0: ev.y0, y1: ev.y1 });
+      });
+    });
+
+    function renderCell(cellEvents) {
+      if (!cellEvents.length) return '';
+      const paras = mergeParagraphs(cellEvents, medianLineH, 0.6);
+      return paras.map((p) => renderParagraph(p, false)).join('\n<br><br>\n');
+    }
+
+    const headHtml = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+    const bodyHtml = rows.map((row) => `<tr>${row.cells.map((c) => `<td>${renderCell(c)}</td>`).join('')}</tr>`).join('\n');
+    return `<table border="1">\n${headHtml}\n${bodyHtml}\n</table>`;
+  }
+
   // A worked-example page has no item-code title, just a short heading (on
   // a real screenshot, visibly centered — well clear of the body's own left
   // margin), directly above single-column body content. Wraps the whole
@@ -501,7 +608,7 @@
     }
     const heading = cleanText(headingText);
     const rest = events.slice(i);
-    const inner = renderSectionContent(rest, medianLineH, { gapRatio: 0.6 });
+    const inner = renderGridTable(rest, medianLineH) || renderSectionContent(rest, medianLineH, { gapRatio: 0.6 });
     const headingHtml = heading ? `<b>${escapeHtml(heading)}</b>\n<br><br>\n\n` : '';
     return `<div class="box">\n${headingHtml}${inner}\n</div>`;
   }
@@ -557,6 +664,16 @@
       // short-label fallback.
       const lineText = cleanText(line.words.map((w) => w.text).join(' '));
       if (looksLikeDialogueLine(lineText)) {
+        events.push({ type: 'content', text: lineText, words: line.words, y0: line.bbox.y0, y1: line.bbox.y1 });
+        return;
+      }
+      // A genuine table header ("AIVQ | Catégorie Performance | Catégorie
+      // Capacité") has TWO+ big gaps (3+ columns), unlike the normal
+      // "Label: content" shape splitLine looks for (exactly one gap, two
+      // columns) — without this check, a short first segment like "AIVQ"
+      // would pass the short-label fallback and get misread as a section
+      // label with the rest of the header as its content.
+      if (looksLikeMultiColumnHeader(line, medianLineH)) {
         events.push({ type: 'content', text: lineText, words: line.words, y0: line.bbox.y0, y1: line.bbox.y1 });
         return;
       }
