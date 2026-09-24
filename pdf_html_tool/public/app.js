@@ -261,9 +261,9 @@
     return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
   }
 
-  // Common OCR confusion: lowercase "l" read instead of digit "1" in item codes.
+  // Common OCR confusion: "l", "I" or "T" read instead of digit "1" in item codes ("Al.", "MT.").
   function fixItemCode(text) {
-    return text.replace(/^([A-Z]{1,3})l([a-z]{0,2}\.?)$/, '$1' + '1' + '$2');
+    return text.replace(/^([A-Z]{1,3})[lIT]([a-z]{0,2}\.?)$/, '$1' + '1' + '$2');
   }
 
   function looksLikeItemCode(label) {
@@ -297,7 +297,7 @@
   // digit — a bare word followed by a comma ("In,") is far more likely to
   // just be a comma in prose than a misread item code.
   function looksLikeListMarker(text) {
-    const m = text.match(/^([A-Za-z]{1,3}\d{0,3}[a-z]{0,2}[.,)]|\d{1,3}[.,)]?)\s+(.*)$/);
+    const m = text.match(/^([A-Z][A-Za-z]{0,2}\d{0,3}[a-z]{0,2}[.,)]|[a-z][.,)]|\d{1,3}[.,)]?)\s+(.*)$/);
     if (!m) return null;
     const raw = m[1];
     if (raw.endsWith(',') && !/\d/.test(raw)) return null;
