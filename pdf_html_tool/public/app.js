@@ -898,7 +898,18 @@
         canvas.toBlob((blob) => resolve({
           blob,
           inverted,
-          pixelInfo: { data: imageData.data, width: canvas.width, height: canvas.height, inverted },
+          // pixelInfo.inverted is deliberately always false, not `inverted`:
+          // by this point imageData.data has already been normalized to
+          // standard dark-text-on-light-background orientation (inverted in
+          // place above if it started dark, left alone if it didn't), so
+          // computeInkDensity should always use the standard "dark pixel =
+          // ink" threshold. Passing `inverted` here was a real bug — it told
+          // computeInkDensity to treat BRIGHT pixels as ink on data that had
+          // already been flipped to make ink dark, so on every dark-mode
+          // screenshot it was measuring background coverage instead of ink
+          // coverage, producing effectively random-looking false-positive
+          // bold words.
+          pixelInfo: { data: imageData.data, width: canvas.width, height: canvas.height, inverted: false },
         }), 'image/png');
       };
       img.onerror = () => reject(new Error('Could not load the image for OCR preprocessing.'));
