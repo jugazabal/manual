@@ -47,11 +47,172 @@
     return cleanFragment(str).trim();
   }
 
+  // The source document hyphenates a word to wrap it across the end of a
+  // line ("pro-" / "blèmes"), and OCR reads that hyphen literally, leaving
+  // "pro- blèmes" instead of "problèmes" wherever a wrapped line gets
+  // rejoined. A trailing ASCII hyphen right after a letter, followed by a
+  // lowercase continuation, is treated as that line-wrap artifact and
+  // removed; a real em/en dash or a hyphen before a capital letter (much
+  // more likely a genuine dash or a new sentence than a mid-word break) is
+  // left alone. A genuine hyphenated compound word that happens to wrap at
+  // its own hyphen (e.g. "au-" / "delà") is rare enough, and unaffected
+  // either way once rejoined, that this needs no per-language dictionary —
+  // it works the same for every language the tool supports.
+  function joinWrappedText(a, b) {
+    const m = a.match(/^(.*\p{L})-$/u);
+    if (m && /^\p{Ll}/u.test(b)) return m[1] + b;
+    return a + ' ' + b;
+  }
+
   // The manual style deliberately pads numbered list items with three spaces,
   // e.g. "1.   Married". Enforced explicitly rather than trying to detect
   // "intentional" spacing runs from OCR/typed text.
   function normalizeListNumber(text) {
     return text.replace(/^(\d{1,3}\.)\s*/, '$1   ');
+  }
+
+  // ========================================================================
+  // High-confidence OCR spelling correction.
+  //
+  // OCR sometimes glues classic look-alike character pairs together inside
+  // an otherwise correctly-read word (rn/m, cl/d, l/1, o/0, vv/w, ri/n). A
+  // fix is only ever applied when the ORIGINAL word is not a recognized
+  // dictionary word AND exactly one of these substitutions turns it into one
+  // that is — no match, or more than one distinct match, leaves the word
+  // untouched. That's what keeps this from ever silently rewriting a
+  // clinical term, item code, or proper noun the dictionary simply doesn't
+  // know: unrecognized-and-unfixable is treated as "leave it alone", not
+  // "guess". Dictionaries are Hunspell wordlists loaded lazily per OCR
+  // language from a CDN, matching this tool's zero-backend,
+  // CDN-only-for-libraries architecture (same approach as Tesseract.js).
+  // ========================================================================
+
+  // Finnish has no practical Hunspell dictionary — its inflectional
+  // morphology needs a dedicated analyzer (Voikko), not a flat wordlist — so
+  // it's intentionally left out. correctOcrWord() is a no-op for any
+  // language with no loaded dictionary (empty `spellers`), never a guess.
+  const DICTIONARY_PACKAGES = {
+    eng: 'dictionary-en@4',
+    fra: 'dictionary-fr@3',
+    deu: 'dictionary-de@3',
+    ita: 'dictionary-it@2',
+    swe: 'dictionary-sv@4',
+  };
+
+  let nspellLibPromise = null;
+  function loadNspellLib() {
+    if (!nspellLibPromise) {
+      nspellLibPromise = import('https://cdn.jsdelivr.net/npm/nspell@2/+esm').then((m) => m.default || m);
+    }
+    return nspellLibPromise;
+  }
+
+  const spellerPromiseCache = {};
+  function loadSpeller(pkg) {
+    if (!spellerPromiseCache[pkg]) {
+      spellerPromiseCache[pkg] = Promise.all([
+        loadNspellLib(),
+        fetch(`https://cdn.jsdelivr.net/npm/${pkg}/index.aff`).then((r) => r.arrayBuffer()),
+        fetch(`https://cdn.jsdelivr.net/npm/${pkg}/index.dic`).then((r) => r.arrayBuffer()),
+      ]).then(([nspell, aff, dic]) => nspell({ aff: new Uint8Array(aff), dic: new Uint8Array(dic) }));
+    }
+    return spellerPromiseCache[pkg];
+  }
+
+  // `languageValue` is the tool's OCR language selector value, e.g. "fra" or
+  // the combined "eng+fra". Loads every dictionary that has one available
+  // and skips the rest; a failed fetch (offline, CDN unreachable) is
+  // swallowed per language so a network hiccup degrades to "no
+  // spell-correction for that language" instead of blocking conversion.
+  async function getSpellers(languageValue) {
+    const codes = (languageValue || '').split('+').map((s) => s.trim()).filter(Boolean);
+    const pkgs = codes.map((c) => DICTIONARY_PACKAGES[c]).filter(Boolean);
+    const results = await Promise.all(pkgs.map((pkg) => loadSpeller(pkg).catch((err) => {
+      console.error('Spell-check dictionary failed to load:', pkg, err);
+      return null;
+    })));
+    return results.filter(Boolean);
+  }
+
+  // rn/m, cl/d, l/1, o/0, vv/w: the classic OCR look-alike pairs, kept to a
+  // short, well-established set rather than trying to be exhaustive.
+  // Matched against a lowercased copy of the word (case is restored on the
+  // winning candidate afterwards), so one list covers every case shape.
+  // Deliberately excludes single-common-letter pairs like ri/n: verified
+  // against real OCR output that bidirectionally swapping "n" (one of the
+  // most frequent letters in these languages) for the rarer 2-char "ri" false
+  // -positives on short, unrelated words (a stray "nel" fragment was
+  // "corrected" to the unrelated real word "riel") — exactly the kind of
+  // guess this feature must never make.
+  const OCR_CONFUSION_PATTERNS = [['rn', 'm'], ['cl', 'd'], ['vv', 'w'], ['l', '1'], ['o', '0']];
+
+  function generateOcrCandidates(lowerCore) {
+    const candidates = new Set();
+    OCR_CONFUSION_PATTERNS.forEach(([a, b]) => {
+      [[a, b], [b, a]].forEach(([from, to]) => {
+        let idx = lowerCore.indexOf(from);
+        while (idx !== -1) {
+          candidates.add(lowerCore.slice(0, idx) + to + lowerCore.slice(idx + from.length));
+          idx = lowerCore.indexOf(from, idx + 1);
+        }
+      });
+    });
+    candidates.delete(lowerCore);
+    return Array.from(candidates);
+  }
+
+  // 'lower' | 'upper' | 'capitalized' | null. Anything else (mixed interior
+  // case — a stray OCR glitch, or a name like "McKay") is left alone by
+  // returning null, out of caution.
+  function caseShapeOf(core) {
+    if (core === core.toLowerCase()) return 'lower';
+    if (core === core.toUpperCase()) return 'upper';
+    if (core.charAt(0) === core.charAt(0).toUpperCase() && core.slice(1) === core.slice(1).toLowerCase()) return 'capitalized';
+    return null;
+  }
+
+  function applyCaseShape(word, shape) {
+    if (shape === 'upper') return word.toUpperCase();
+    if (shape === 'capitalized') return word.charAt(0).toUpperCase() + word.slice(1);
+    return word;
+  }
+
+  // Item codes (G1c, B4f.) and short all-caps acronyms (AIVQ, MDS) are never
+  // dictionary words in any language and must never be run through
+  // candidate generation — skip them outright rather than relying on "no
+  // valid candidate found" to protect them.
+  function looksLikeCodeOrAcronym(core) {
+    if (looksLikeItemCode(core)) return true;
+    return /^[A-Z]{2,6}$/.test(core);
+  }
+
+  function correctOcrWord(rawWord, spellers) {
+    if (!spellers || !spellers.length || !rawWord) return rawWord;
+    const m = rawWord.match(/^([^\p{L}\p{N}]*)(.*?)([^\p{L}\p{N}]*)$/u);
+    const lead = m[1];
+    const core = m[2];
+    const trail = m[3];
+    // A trailing hyphen marks a not-yet-rejoined line-wrap fragment ("pro-")
+    // — spell-checking half a word is meaningless, so leave it for the
+    // hyphenation fix to rejoin first.
+    if (trail.includes('-') || !core) return rawWord;
+    if (core.replace(/[^\p{L}]/gu, '').length < 3) return rawWord;
+    if (looksLikeCodeOrAcronym(core)) return rawWord;
+
+    const lowerCore = core.toLowerCase();
+    if (spellers.some((sp) => sp.correct(core) || sp.correct(lowerCore))) return rawWord;
+
+    const shape = caseShapeOf(core);
+    if (!shape) return rawWord;
+
+    const validCandidates = new Set();
+    generateOcrCandidates(lowerCore).forEach((candidate) => {
+      if (spellers.some((sp) => sp.correct(candidate))) validCandidates.add(candidate);
+    });
+    if (validCandidates.size !== 1) return rawWord;
+
+    const [winner] = validCandidates;
+    return lead + applyCaseShape(winner, shape) + trail;
   }
 
   // ========================================================================
@@ -314,10 +475,35 @@
     lines.forEach((line) => { delete line.boldSeq; });
   }
 
+  // Merges a line-wrap-hyphenated word pair ("pro-", "blèmes") into one word
+  // object before rendering. renderProseWords joins words with a plain space,
+  // which would otherwise bypass the same fix already applied to the merged
+  // paragraph text (that string isn't what gets rendered here — this word
+  // array is, precisely so inline bold detection has per-word data to work
+  // with), leaving the literal "pro- blèmes" artifact in prose output.
+  function mergeHyphenatedWords(words) {
+    const merged = [];
+    for (let i = 0; i < words.length; i += 1) {
+      const w = words[i];
+      const next = words[i + 1];
+      if (next) {
+        const joined = joinWrappedText(w.text, next.text);
+        if (joined !== `${w.text} ${next.text}`) {
+          merged.push({ text: joined, bold: w.bold, bbox: w.bbox });
+          i += 1;
+          continue;
+        }
+      }
+      merged.push(w);
+    }
+    return merged;
+  }
+
   // Renders a run of words with bold spans wrapped in <b>, for plain prose
   // where inline bold (e.g. a bolded code value inside a sentence) has no
   // structural marker to detect it by — only the pixel-density signal above.
-  function renderProseWords(words) {
+  function renderProseWords(rawWords) {
+    const words = mergeHyphenatedWords(rawWords);
     const parts = [];
     let i = 0;
     while (i < words.length) {
@@ -333,13 +519,13 @@
     return parts.join(' ');
   }
 
-  function flattenLines(blocks) {
+  function flattenLines(blocks, spellers) {
     const lines = [];
     (blocks || []).forEach((block) => {
       (block.paragraphs || []).forEach((para) => {
         (para.lines || []).forEach((line) => {
           const words = (line.words || [])
-            .map((w) => ({ text: cleanFragment(w.text || ''), bbox: w.bbox }))
+            .map((w) => ({ text: correctOcrWord(cleanFragment(w.text || ''), spellers), bbox: w.bbox }))
             .filter((w) => w.text);
           if (words.length) lines.push({ bbox: line.bbox, words });
         });
@@ -358,7 +544,7 @@
       const gap = prevY1 == null ? Infinity : ev.y0 - prevY1;
       const isNewStart = !!looksLikeListMarker(ev.text) || !!looksLikeDialogueLine(ev.text);
       if (current && gap < ratio * medianLineH && !isNewStart) {
-        current.text = cleanText(current.text + ' ' + ev.text);
+        current.text = cleanText(joinWrappedText(current.text, ev.text));
         if (ev.words) current.words = (current.words || []).concat(ev.words);
       } else {
         const x0 = ev.words && ev.words.length ? ev.words[0].bbox.x0 : null;
@@ -652,7 +838,7 @@
       const ev = events[i];
       const gap = prevY1 == null ? -Infinity : ev.y0 - prevY1;
       if (i === 0 || gap < 0.6 * medianLineH) {
-        headingText += (headingText ? ' ' : '') + ev.text;
+        headingText = headingText ? joinWrappedText(headingText, ev.text) : ev.text;
         prevY1 = ev.y1;
         i += 1;
       } else break;
@@ -664,8 +850,8 @@
     return `<div class="box">\n${headingHtml}${inner}\n</div>`;
   }
 
-  function convertBlocksToHtml(blocks, pixelInfo) {
-    const lines = flattenLines(blocks)
+  function convertBlocksToHtml(blocks, pixelInfo, spellers) {
+    const lines = flattenLines(blocks, spellers)
       .filter((line) => !looksLikePageFooter(line))
       .filter((line) => !looksLikeAnswerBoxGrid(line));
     if (!lines.length) return '';
@@ -770,7 +956,7 @@
         let prevY1 = ev.y1;
         let j = i + 1;
         while (j < events.length && events[j].type === 'content' && (events[j].y0 - prevY1) < 0.6 * medianLineH) {
-          titleText += ' ' + events[j].text;
+          titleText = joinWrappedText(titleText, events[j].text);
           prevY1 = events[j].y1;
           j += 1;
         }
@@ -940,6 +1126,9 @@
     try {
       const { blob, inverted, pixelInfo } = await prepareImageForOcr(currentImageFile);
       ocrStatus.textContent = (inverted ? 'Dark background detected — inverted for OCR. ' : '') + 'Loading OCR engine...';
+      // Kicked off alongside OCR (not awaited yet) so the dictionary fetch
+      // doesn't add latency on top of recognition.
+      const spellersPromise = getSpellers(ocrLanguage.value);
       const worker = await Tesseract.createWorker(ocrLanguage.value, 1, {
         logger: (m) => {
           if (m.status) ocrStatus.textContent = m.status + (m.progress ? ` (${Math.round(m.progress * 100)}%)` : '');
@@ -952,7 +1141,8 @@
       rawTextOutput.textContent = data.text;
       rawTextDetails.classList.remove('hidden');
 
-      const html = convertBlocksToHtml(data.blocks, pixelInfo);
+      const spellers = await spellersPromise;
+      const html = convertBlocksToHtml(data.blocks, pixelInfo, spellers);
       if (appendToggle.checked && htmlOutput.value.trim()) {
         htmlOutput.value = htmlOutput.value.trim() + '\n\n' + html;
       } else {
