@@ -34,6 +34,7 @@ format:
    
   pdf:
     pdf-engine: lualatex   # Or "prince" or "lualatex"
+    latex-tinytex: false
     toc: true
     number-sections: true
     margin-left: 254mm
